@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lexikon-Generator — Komposita</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="app-wrapper">
+      <div class="app-header-inner">
+
+        <div class="app-brand">
+          <span class="app-logo" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"
+                 style="color:var(--color-accent)">
+              <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/>
+              <path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/>
+            </svg>
+          </span>
+          <span class="app-title">Lexikon-Generator</span>
+        </div>
+
+        <span class="app-subtitle">Komposita-Namen · JSON-Lexikon</span>
+
+        <div class="header-right">
+          <!-- Theme toggle — single button, guide-compliant -->
+          <button class="theme-toggle" id="themeToggle" aria-label="Zu Dark Mode wechseln">
+            <svg class="icon-sun" width="15" height="15" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4"/>
+              <line x1="12" y1="2" x2="12" y2="6"/>
+              <line x1="12" y1="18" x2="12" y2="22"/>
+              <line x1="4.22" y1="4.22" x2="7.05" y2="7.05"/>
+              <line x1="16.95" y1="16.95" x2="19.78" y2="19.78"/>
+              <line x1="2" y1="12" x2="6" y2="12"/>
+              <line x1="18" y1="12" x2="22" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="7.05" y2="16.95"/>
+              <line x1="16.95" y1="7.05" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-wrapper">
+    <div class="main-grid">
+
+      <aside>
+        <div id="importPanels" class="import-panels"></div>
+
+        <div class="card">
+          <p class="section-label">Optionen</p>
+          <div class="form-group">
+            <label class="field-label" for="outputFormat">Ausgabeformat</label>
+            <select class="form-select" id="outputFormat">
+              <option value="json">JSON</option>
+              <option value="const">const (JS)</option>
+              <option value="export">export default (ES Modul)</option>
+            </select>
+          </div>
+          <div class="form-group" id="varNameGroup" style="display:none">
+            <label class="field-label" for="varName">Variablenname</label>
+            <input type="text" class="form-input" id="varName" value="LEXIKON" />
+          </div>
+          <div class="form-group mb-0">
+            <label class="checkbox-row">
+              <input type="checkbox" id="sortKeys" checked />
+              <span>Alphabetisch sortieren</span>
+            </label>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-full mt-3" id="generateBtn" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          JSON generieren
+        </button>
+      </aside>
+
+      <section>
+        <div class="card hidden" id="previewCard">
+          <div class="stat-bar">
+            <p class="section-label mb-0">Vorschau</p>
+            <span class="stat-pill" id="rowCount">0 Einträge</span>
+          </div>
+          <div class="preview-wrap">
+            <table class="preview-table" id="previewTable"></table>
+          </div>
+        </div>
+
+        <div class="card hidden" id="validationCard">
+          <p class="section-label">Validierung</p>
+          <div class="validation-list" id="validationList"></div>
+        </div>
+
+        <div class="card hidden" id="outputCard">
+          <div class="flex-between mb-3">
+            <p class="section-label mb-0">Output</p>
+            <div class="output-actions">
+              <button class="btn btn-ghost btn-sm" id="copyBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                Kopieren
+              </button>
+              <button class="btn btn-secondary btn-sm" id="downloadOutputBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download
+              </button>
+            </div>
+          </div>
+          <div class="code-block" id="codeOutput"></div>
+        </div>
+
+        <div class="empty-state" id="emptyState">
+          <span class="arrow">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+          </span>
+          Daten in einer Wortart-Karte importieren,<br>
+          dann <strong>JSON generieren</strong> klicken
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast-container" aria-live="polite">
+    <div class="toast-msg" id="toast"></div>
+  </div>
+
+  <!-- Theme toggle — inline, runs before body renders to avoid flash -->
+  <script>
+  (function() {
+    var html   = document.documentElement;
+    var toggle = document.getElementById('themeToggle');
+
+    function applyTheme(theme) {
+      html.setAttribute('data-theme', theme);
+      if (toggle) toggle.setAttribute('aria-label',
+        theme === 'dark' ? 'Zu Light Mode wechseln' : 'Zu Dark Mode wechseln');
+    }
+
+    var saved = localStorage.getItem('ds-warm-theme');
+    if (saved) {
+      applyTheme(saved);
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      applyTheme('dark');
+    }
+
+    if (toggle) {
+      toggle.addEventListener('click', function() {
+        var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        localStorage.setItem('ds-warm-theme', next);
+      });
+    }
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+      if (!localStorage.getItem('ds-warm-theme')) applyTheme(e.matches ? 'dark' : 'light');
+    });
+  })();
+  </script>
+
+  <!-- App scripts (strict load order) -->
+  <script src="js/icons.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/validator.js"></script>
+  <script src="js/format-detector.js"></script>
+  <script src="js/parsers/format/spreadsheet.js"></script>
+  <script src="js/parsers/format/text-formats.js"></script>
+  <script src="js/parsers/format/normalizer.js"></script>
+  <script src="js/parsers/nomen.js"></script>
+  <script src="js/parsers/verb.js"></script>
+  <script src="js/parsers/adjektiv.js"></script>
+  <script src="js/parsers/simple.js"></script>
+  <script src="js/ods-template.js"></script>
+  <script src="js/import-panel.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
