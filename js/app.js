@@ -42,6 +42,23 @@ document.addEventListener('DOMContentLoaded', () => {
   _bindGenerateBtn();
   _bindOutputActions();
 
+  // hinzugefügt: Vorschau-Callbacks und Event-Listener initialisieren
+  initPreviewCallbacks({
+    onDelete(wortart, key) {
+      const panel = _panels.get(wortart);
+      if (panel && panel.removeEntry(key)) {
+        showToast(`"${key}" gelöscht`);
+        _refreshAfterEdit();
+      }
+    },
+    onUpdate(wortart, key, updatedEntry) {
+      const panel = _panels.get(wortart);
+      if (panel && panel.updateEntry(key, updatedEntry)) {
+        _refreshAfterEdit();
+      }
+    },
+  });
+  initPreviewEvents();
 });
 
 
@@ -138,9 +155,37 @@ function _generate() {
     entries = [...entries].sort((a, b) => a.key.localeCompare(b.key, 'de'));
   }
 
-  // Build lexikon object
-  const lexikon = {};
-  entries.forEach(({ key, entry }) => { lexikon[key] = entry; });
+  // Build lexikon object — geändert: nach Wortart gruppiert
+  //
+  // Mapping: entry.wortart → Kategorie-Key im Output-Objekt
+  const WORTART_TO_KEY = {
+    'Nomen':       'nomen',
+    'Verb':        'verben',
+    'Adjektiv':    'adjektive',
+    'Präposition': 'präpositionen',
+    'Adverb':      'adverbien',
+    'Partikel':    'partikel',
+  };
+
+  // geändert: feste Kategorien in definierter Reihenfolge vorinitialisieren
+  const lexikon = {
+    nomen:         {},
+    verben:        {},
+    adjektive:     {},
+    präpositionen: {},
+    adverbien:     {},
+    partikel:      {},
+  };
+
+  entries.forEach(({ key, entry }) => {
+    const wortart   = entry.wortart ?? '';
+    // geändert: bekannte Wortart → fester Key; unbekannt → lowercase oder "unbekannt"
+    const gruppeKey = WORTART_TO_KEY[wortart]
+      ?? (wortart ? wortart.toLowerCase() : 'unbekannt');
+    // geändert: dynamische Kategorie anlegen, falls Wortart nicht im Mapping
+    if (!lexikon[gruppeKey]) lexikon[gruppeKey] = {};
+    lexikon[gruppeKey][key] = entry;
+  });
 
   // Validate
   renderValidation(validateLexikon(entries));
@@ -158,8 +203,8 @@ function _generate() {
     _outputString = `export default ${raw};`;
   }
 
-  // Render preview (use subset for table)
-  renderPreview(entries);
+  // geändert: gruppierte Vorschau statt flacher Tabelle
+  renderPreviewGrouped(entries);
   showOutput(_outputString);
 }
 
@@ -171,6 +216,22 @@ function _getAllEntries() {
   const all = [];
   _panels.forEach(panel => all.push(...panel.getEntries()));
   return all;
+}
+
+/**
+ * Nach einer Inline-Edit oder Delete-Aktion: Vorschau + Output-Counter aktualisieren.
+ * Wenn bereits Output vorhanden, neu generieren.
+ * // hinzugefügt
+ */
+function _refreshAfterEdit() {
+  const entries = _getAllEntries();
+  setGenerateEnabled(entries.length > 0);
+  if (entries.length) {
+    renderPreviewGrouped(entries);
+    if (_outputString) _generate();
+  } else {
+    resetOutput();
+  }
 }
 
 

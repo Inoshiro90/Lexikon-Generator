@@ -26,6 +26,7 @@
 /** @type {OdsTemplateConfig[]} */
 const ODS_TEMPLATES = [
   {
+    wortartKey: 'Nomen',           // hinzugefügt: expliziter Match-Key
     filename:  'vorlage-nomen.ods',
     sheetName: 'Nomen',
     data: [
@@ -50,6 +51,7 @@ const ODS_TEMPLATES = [
     ],
   },
   {
+    wortartKey: 'Verb',            // hinzugefügt
     filename:  'vorlage-verben.ods',
     sheetName: 'Verben',
     data: [
@@ -70,6 +72,7 @@ const ODS_TEMPLATES = [
     ],
   },
   {
+    wortartKey: 'Adjektiv',        // hinzugefügt
     filename:  'vorlage-adjektive.ods',
     sheetName: 'Adjektive',
     data: [
@@ -88,6 +91,7 @@ const ODS_TEMPLATES = [
     ],
   },
   {
+    wortartKey: 'Präposition',     // hinzugefügt
     filename:  'vorlage-praepositionen.ods',
     sheetName: 'Präpositionen',
     data: [
@@ -102,6 +106,7 @@ const ODS_TEMPLATES = [
     ],
   },
   {
+    wortartKey: 'Adverb',          // hinzugefügt
     filename:  'vorlage-adverbien.ods',
     sheetName: 'Adverbien',
     data: [
@@ -112,6 +117,7 @@ const ODS_TEMPLATES = [
     notes: ['grundform = Unveränderliche Adverbform'],
   },
   {
+    wortartKey: 'Partikel',        // hinzugefügt
     filename:  'vorlage-partikel.ods',
     sheetName: 'Partikel',
     data: [
@@ -134,10 +140,8 @@ function downloadODSTemplate(wortartKey) {
     return;
   }
 
-  const config = ODS_TEMPLATES.find(
-    t => t.sheetName.toLowerCase() === wortartKey.toLowerCase() ||
-         t.sheetName.toLowerCase().replace(/en$/, '') === wortartKey.toLowerCase().replace(/en$/, '')
-  );
+  // geändert: expliziter Key-Vergleich statt fragiler String-Heuristik
+  const config = ODS_TEMPLATES.find(t => t.wortartKey === wortartKey);
 
   if (!config) {
     alert(`Keine ODS-Vorlage für Wortart "${wortartKey}" gefunden.`);

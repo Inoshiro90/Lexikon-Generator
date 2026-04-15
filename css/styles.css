@@ -1433,3 +1433,102 @@ button { cursor: pointer; font-family: inherit; }
 .btn-icon:hover { background: rgba(0,0,0,0.06); color: var(--text-primary); }
 [data-theme="dark"] .btn-icon:hover { background: rgba(255,255,255,0.08); }
 .btn-icon:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+
+
+/* ================================================================
+   GROUPED PREVIEW — Wortart-Sektionen           // hinzugefügt
+   ================================================================ */
+
+/* Trennbereich zwischen Wortart-Blöcken */
+.wortart-section + .wortart-section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Kopfzeile der Sektion */
+.wortart-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.wortart-section-label {
+  font-size: 11px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Aktionen-Spalte: schmal, vertikal zentriert */
+.preview-table .col-actions { width: 56px; padding: 0 4px; }
+.preview-table .col-actions-head { width: 56px; }
+
+.preview-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease), color var(--dur-base) var(--ease);
+}
+.preview-action-btn:hover { background: var(--bg-warm); color: var(--text-primary); }
+.preview-delete-btn:hover { color: #e74c3c !important; }
+
+/* Zeile im Edit-Modus */
+.preview-table tr.row-editing td { background: var(--bg-warm) !important; }
+
+/* Inline-Inputs in Zellen */
+.cell-input {
+  width: 100%;
+  min-width: 60px;
+  padding: 2px 5px;
+  font-size: 12px;
+  font-family: inherit;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-subtle);
+  outline: none;
+}
+.cell-input:focus { box-shadow: 0 0 0 2px rgba(180,130,80,0.2); }
+
+.cell-select {
+  padding: 2px 4px;
+  font-size: 12px;
+  font-family: inherit;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-subtle);
+  cursor: pointer;
+}
+
+/* Bool-Zelle im View-Modus */
+.preview-bool { text-align: center; }
+
+/* Extra-kleiner Button-Stil */
+.btn-xs {
+  padding: 1px 5px;
+  font-size: 11px;
+  height: 20px;
+  line-height: 1;
+}
+
+/* Validierungsfehler aus dem Import (mehrzeilig) */
+.import-status .val-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: 3px 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
