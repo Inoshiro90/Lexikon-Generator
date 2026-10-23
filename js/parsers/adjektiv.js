@@ -12,30 +12,29 @@ function _adjektivRow(row) {
   const raw      = row['fuge_erst'];
   const fugeRaw  = (raw !== undefined && raw !== '') ? raw : ',e';
 
-  return {
-    key,
-    entry: {
-      wortart: 'Adjektiv',
-      position: { erst: istErst, zweit: istZweit },
-      stamm: str(row['stamm']),
-      formen: {
-        positiv:    str(row['positiv']),
-        komparativ: str(row['komparativ']),
-        superlativ: str(row['superlativ']),
-      },
-      fuge: {
-        als_erst:  resolveFuge(fugeRaw, istErst),
-        als_zweit: resolveFuge(row['fuge_zweit'], istZweit),
-      },
+  const entry = {
+    wortart: 'Adjektiv',
+    position: { erst: istErst, zweit: istZweit },
+    stamm: str(row['stamm']),
+    formen: {
+      positiv:    str(row['positiv']),
+      komparativ: str(row['komparativ']),
+      superlativ: str(row['superlativ']),
+    },
+    fuge: {
+      als_erst:  resolveFuge(fugeRaw, istErst),
+      als_zweit: resolveFuge(row['fuge_zweit'], istZweit),
     },
   };
+  taxApplyToEntry(entry, row, key);
+  return { key, entry };
 }
 
 function getAdjektivTemplate() {
   return [
-    'key,wortart,erst,zweit,stamm,positiv,komparativ,superlativ,fuge_erst,fuge_zweit',
-    'dunkel,Adjektiv,true,false,dunkel,dunkel,dunkler,dunkelst,",e",',
-    'groß,Adjektiv,true,false,groß,groß,größer,größt,"",',
-    'schnell,Adjektiv,true,false,schnell,schnell,schneller,schnellst,",e",',
+    'key,wortart,erst,zweit,stamm,positiv,komparativ,superlativ,fuge_erst,fuge_zweit,kategorie,kategorie_weitere',
+    'dunkel,Adjektiv,true,false,dunkel,dunkel,dunkler,dunkelst,",e",,Modifikator > Sinneseindruck,',
+    'groß,Adjektiv,true,false,groß,groß,größer,größt,"",,Modifikator > Oberfläche & Form,',
+    'schnell,Adjektiv,true,false,schnell,schnell,schneller,schnellst,",e",,,',
   ].join('\n');
 }

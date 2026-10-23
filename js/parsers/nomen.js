@@ -37,17 +37,20 @@ function _nomenRow(row) {
 
   if (genus) {
     const { wortart, position, stamm: s, formen, fuge } = entry;
-    return { key, entry: { wortart, genus, position, stamm: s, formen, fuge } };
+    const withGenus = { wortart, genus, position, stamm: s, formen, fuge };
+    taxApplyToEntry(withGenus, row, key);
+    return { key, entry: withGenus };
   }
+  taxApplyToEntry(entry, row, key);
   return { key, entry };
 }
 
 function getNomenTemplate() {
   return [
-    'key,wortart,genus,erst,zweit,stamm,nom_sg,gen_sg,plural,fuge_erst,fuge_zweit',
-    'Wolf,Nomen,maskulin,true,true,wolf,Wolf,Wolfs,Wölfe,",s",""',
-    'Stein,Nomen,maskulin,true,true,stein,Stein,Steins,Steine,"",""',
-    'Frau,Nomen,feminin,true,true,frau,Frau,Frau,Frauen,",en",""',
-    'Kind,Nomen,neutrum,true,true,kind,Kind,Kindes,Kinder,",er",""',
+    'key,wortart,genus,erst,zweit,stamm,nom_sg,gen_sg,plural,fuge_erst,fuge_zweit,kategorie,kategorie_weitere',
+    'Wolf,Nomen,maskulin,true,true,wolf,Wolf,Wolfs,Wölfe,",s","",Kreatur > Tier,',
+    'Stein,Nomen,maskulin,true,true,stein,Stein,Steins,Steine,"","",Material > Stein & Erde,',
+    'Frau,Nomen,feminin,true,true,frau,Frau,Frau,Frauen,",en","",Person > Verwandtschaft & Lebensphase,',
+    'Kind,Nomen,neutrum,true,true,kind,Kind,Kindes,Kinder,",er","",Person > Verwandtschaft & Lebensphase,',
   ].join('\n');
 }

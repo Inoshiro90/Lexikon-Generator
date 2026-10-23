@@ -165,6 +165,18 @@ function createImportPanel(config, callbacks = {}) {
 		statusEl.className = 'import-status hidden';
 		statusEl.innerHTML = '';
 	}
+	/** Hängt Kategorie-/Import-Warnungen (TAX_IMPORT_WARNINGS) an die Statusanzeige. */
+	function _appendTaxWarnings() {
+		if (!TAX_IMPORT_WARNINGS.length) return;
+		const html = TAX_IMPORT_WARNINGS
+			.slice(0, 20)
+			.map((m) => `<div class="val-item warn">${icon('alert-triangle', 11)} ${escHtml(m)}</div>`)
+			.join('');
+		const more = TAX_IMPORT_WARNINGS.length > 20
+			? `<div class="val-item warn">… und ${TAX_IMPORT_WARNINGS.length - 20} weitere Hinweise</div>`
+			: '';
+		statusEl.insertAdjacentHTML('beforeend', html + more);
+	}
 	function _updateCount(n) {
 		countPill.textContent = String(n);
 		countPill.classList.toggle('stat-pill--active', n > 0);
@@ -175,9 +187,16 @@ function createImportPanel(config, callbacks = {}) {
 	}
 
 	// ── Core: rows[] → entries[]                          // geändert: Validierung pro Eintrag
-	function _importRows(rows, fmt) {
+	function _importRows(rows, fmt, quiet) {
 		_clearStatus();
 		try {
+			// Zeilen anderer Wortarten (z. B. gruppiertes Gesamt-JSON) gehören nicht in dieses Panel
+			const before = rows.length;
+			rows = rows.filter((r) => !r.wortart || String(r.wortart).trim() === config.key);
+			const skippedOther = before - rows.length;
+			if (skippedOther > 0) {
+				taxWarn(`${skippedOther} Zeile(n) mit anderer Wortart übersprungen (nur „${config.key}“ wird hier übernommen).`);
+			}
 			const parsed = config.rowParser(rows);
 			if (!parsed.length) {
 				_setStatus(
@@ -222,6 +241,7 @@ function createImportPanel(config, callbacks = {}) {
 				}
 				_entries = valid;
 				_updateCount(valid.length);
+				if (!quiet) _appendTaxWarnings();
 				if (callbacks.onImport) callbacks.onImport(config.key, valid);
 			}
 		} catch (err) {
@@ -237,7 +257,8 @@ function createImportPanel(config, callbacks = {}) {
 			return;
 		}
 		try {
-			const {rows, formatUsed} = normalizeText(text, '');
+			taxResetImportWarnings();
+					const {rows, formatUsed} = normalizeText(text, '');
 			_showFmtBadge(fmtBadgePaste, formatUsed);
 			_importRows(rows, formatUsed);
 		} catch (err) {
@@ -296,6 +317,7 @@ function createImportPanel(config, callbacks = {}) {
 			const reader = new FileReader();
 			reader.onload = (e) => {
 				try {
+					taxResetImportWarnings();
 					const {rows, formatUsed} = normalizeBinary(e.target.result);
 					_showFmtBadge(fmtBadgeFile, formatUsed);
 					_importRows(rows, formatUsed);
@@ -310,6 +332,7 @@ function createImportPanel(config, callbacks = {}) {
 			const reader = new FileReader();
 			reader.onload = (e) => {
 				try {
+					taxResetImportWarnings();
 					const {rows, formatUsed} = normalizeText(e.target.result, _pendingFile.name);
 					_showFmtBadge(fmtBadgeFile, formatUsed);
 					_importRows(rows, formatUsed);
@@ -335,6 +358,12 @@ function createImportPanel(config, callbacks = {}) {
 			_entries = [];
 			_updateCount(0);
 			_clearStatus();
+		},
+
+		/** Programmatischer Import (z. B. „Lexikon laden“): rows → Einträge dieses Panels. */
+		importRows(rows, fmt, quiet) {
+			_importRows(rows, fmt || 'json', quiet);
+			return _entries.length;
 		},
 
 		// hinzugefügt: Eintrag im Panel aktualisieren (nach Inline-Bearbeitung)

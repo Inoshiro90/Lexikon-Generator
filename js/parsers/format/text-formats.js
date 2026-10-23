@@ -17,11 +17,31 @@
 
 /* ================================================================
    JSON PARSER
-   Accepts two shapes:
-     1. Lexikon format: { "Wolf": { wortart, stamm, … } }
-        → rows with `key` = the top-level key
-     2. Array of row objects: [ { key, wortart, … }, … ]
+   Accepts these shapes:
+     1. Flat lexikon:     { "Wolf": { wortart, stamm, … } }
+     2. Grouped lexikon:  { "nomen": { "Wolf": { … } }, "verben": { … },
+                            "_taxonomie": { … } }       (Ausgabe dieses Tools)
+     3. Array of rows:    [ { key, wortart, … }, … ]
+   Felder, die der Parser nicht kennt (z. B. "semantik"), werden als
+   row.semantik bzw. row.__extra durchgereicht statt verworfen.
+   Eine eingebettete "_taxonomie" wird in die aktuelle Taxonomie uebernommen.
    ================================================================ */
+
+/** Gruppenschluessel der Ausgabe → Wortart (Fallback, falls wortart im Eintrag fehlt). */
+const JSON_GROUP_TO_WORTART = {
+  nomen: 'Nomen', verben: 'Verb', adjektive: 'Adjektiv',
+  'präpositionen': 'Präposition', praepositionen: 'Präposition',
+  adverbien: 'Adverb', partikel: 'Partikel',
+};
+
+/** Vom Eintragsformat bekannte Felder (alles andere landet in row.__extra). */
+const JSON_KNOWN_ENTRY_FIELDS = new Set(['wortart', 'genus', 'position', 'stamm', 'formen', 'fuge', 'semantik']);
+
+function _isPlainObject(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
+
+function _looksLikeEntry(v) {
+  return _isPlainObject(v) && (typeof v.wortart === 'string' || _isPlainObject(v.position) || _isPlainObject(v.formen));
+}
 
 /**
  * @param {string} text
@@ -35,39 +55,74 @@ function parseJSONFormat(text) {
     throw new Error(`Ungültiges JSON: ${e.message}`);
   }
 
-  // Shape 2: plain array
+  // Shape 3: plain array
   if (Array.isArray(parsed)) {
     return parsed.map(r => _coerceRow(r));
   }
 
-  // Shape 1: lexikon output — explode into rows
-  if (parsed && typeof parsed === 'object') {
-    return Object.entries(parsed).map(([key, entry]) => {
-      const row = { key };
-      // Flatten nested structure back into flat row for wortart parsers
-      if (entry.wortart)            row.wortart     = entry.wortart;
-      if (entry.genus)              row.genus        = entry.genus;
-      if (entry.position) {
-        row.erst  = entry.position.erst;
-        row.zweit = entry.position.zweit;
-      }
-      if (entry.stamm)              row.stamm        = entry.stamm;
-      if (entry.formen) {
-        Object.assign(row, entry.formen);
-      }
-      if (entry.fuge) {
-        row.fuge_erst  = Array.isArray(entry.fuge.als_erst)
-          ? entry.fuge.als_erst.join(',')
-          : '';
-        row.fuge_zweit = Array.isArray(entry.fuge.als_zweit)
-          ? entry.fuge.als_zweit.join(',')
-          : null;
-      }
-      return _coerceRow(row);
-    });
+  if (!_isPlainObject(parsed)) {
+    throw new Error('JSON muss ein Objekt (Lexikon) oder ein Array von Einträgen sein.');
   }
 
-  throw new Error('JSON muss ein Objekt (Lexikon) oder ein Array von Einträgen sein.');
+  // Eingebettete Taxonomie zuerst uebernehmen, damit Kategorien aufgeloest werden koennen
+  if (parsed._taxonomie !== undefined && typeof taxMergeSerialized === 'function') {
+    if (typeof TAX_IMPORT_WARNINGS !== 'undefined') {
+      taxMergeSerialized(parsed._taxonomie, TAX_IMPORT_WARNINGS);
+    } else {
+      taxMergeSerialized(parsed._taxonomie);
+    }
+  }
+
+  const rows = [];
+  for (const [topKey, value] of Object.entries(parsed)) {
+    if (topKey.startsWith('_')) continue;          // Metadaten (z. B. _taxonomie)
+    if (!_isPlainObject(value)) continue;
+    if (_looksLikeEntry(value)) {
+      // Shape 1: flacher Eintrag
+      rows.push(_entryToRow(topKey, value, null));
+    } else {
+      // Shape 2: Gruppe { key: entry }
+      const wortartFallback = JSON_GROUP_TO_WORTART[topKey.toLowerCase()] || '';
+      for (const [key, entry] of Object.entries(value)) {
+        if (!_isPlainObject(entry)) continue;
+        rows.push(_entryToRow(key, entry, wortartFallback));
+      }
+    }
+  }
+  return rows;
+}
+
+/** Eintrag (verschachtelt) → flache Zeile fuer die Wortart-Parser. */
+function _entryToRow(key, entry, wortartFallback) {
+  const row = { key };
+  // Flatten nested structure back into flat row for wortart parsers
+  if (entry.wortart)            row.wortart     = entry.wortart;
+  else if (wortartFallback)     row.wortart     = wortartFallback;
+  if (entry.genus)              row.genus        = entry.genus;
+  if (entry.position) {
+    row.erst  = entry.position.erst;
+    row.zweit = entry.position.zweit;
+  }
+  if (entry.stamm)              row.stamm        = entry.stamm;
+  if (entry.formen) {
+    Object.assign(row, entry.formen);
+  }
+  if (entry.fuge) {
+    row.fuge_erst  = Array.isArray(entry.fuge.als_erst)
+      ? entry.fuge.als_erst.join(',')
+      : '';
+    row.fuge_zweit = Array.isArray(entry.fuge.als_zweit)
+      ? entry.fuge.als_zweit.join(',')
+      : null;
+  }
+  if (_isPlainObject(entry.semantik)) row.semantik = entry.semantik;
+
+  const extra = {};
+  for (const k of Object.keys(entry)) {
+    if (!JSON_KNOWN_ENTRY_FIELDS.has(k) && k !== '__proto__') extra[k] = entry[k];
+  }
+  if (Object.keys(extra).length > 0) row.__extra = extra;
+  return _coerceRow(row);
 }
 
 /** Coerce boolean fields in a plain row object. */
@@ -76,6 +131,8 @@ function _coerceRow(row) {
   Object.entries(row).forEach(([k, v]) => {
     if (v === null || v === undefined) { out[k] = ''; return; }
     if (typeof v === 'boolean') { out[k] = v; return; }
+    // Strukturierte Zusatzinformationen unveraendert durchreichen
+    if ((k === 'semantik' || k === '__extra') && _isPlainObject(v)) { out[k] = v; return; }
     const s = String(v).trim();
     const lo = s.toLowerCase();
     if (lo === 'true' || lo === 'wahr')   { out[k] = true;  return; }

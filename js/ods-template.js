@@ -30,11 +30,11 @@ const ODS_TEMPLATES = [
     filename:  'vorlage-nomen.ods',
     sheetName: 'Nomen',
     data: [
-      ['key', 'wortart', 'genus', 'erst', 'zweit', 'stamm', 'nom_sg', 'gen_sg', 'plural', 'fuge_erst', 'fuge_zweit'],
-      ['Wolf',  'Nomen', 'maskulin', 'true', 'true', 'wolf',  'Wolf',  'Wolfs',  'Wölfe',  ',s', ''],
-      ['Stein', 'Nomen', 'maskulin', 'true', 'true', 'stein', 'Stein', 'Steins', 'Steine', '',   ''],
-      ['Frau',  'Nomen', 'feminin',  'true', 'true', 'frau',  'Frau',  'Frau',   'Frauen', ',en',''],
-      ['Kind',  'Nomen', 'neutrum',  'true', 'true', 'kind',  'Kind',  'Kindes', 'Kinder', ',er',''],
+      ['key', 'wortart', 'genus', 'erst', 'zweit', 'stamm', 'nom_sg', 'gen_sg', 'plural', 'fuge_erst', 'fuge_zweit', 'kategorie', 'kategorie_weitere'],
+      ['Wolf',  'Nomen', 'maskulin', 'true', 'true', 'wolf',  'Wolf',  'Wolfs',  'Wölfe',  ',s', '', 'Kreatur > Tier', ''],
+      ['Stein', 'Nomen', 'maskulin', 'true', 'true', 'stein', 'Stein', 'Steins', 'Steine', '',   '', 'Material > Stein & Erde', ''],
+      ['Frau',  'Nomen', 'feminin',  'true', 'true', 'frau',  'Frau',  'Frau',   'Frauen', ',en','', 'Person > Verwandtschaft & Lebensphase', ''],
+      ['Kind',  'Nomen', 'neutrum',  'true', 'true', 'kind',  'Kind',  'Kindes', 'Kinder', ',er','', 'Person > Verwandtschaft & Lebensphase', ''],
     ],
     notes: [
       'key      = Eindeutiger Schlüssel im Lexikon (z.B. "Wolf")',
@@ -55,10 +55,10 @@ const ODS_TEMPLATES = [
     filename:  'vorlage-verben.ods',
     sheetName: 'Verben',
     data: [
-      ['key', 'wortart', 'erst', 'zweit', 'stamm', 'infinitiv', 'fuge_erst', 'fuge_zweit'],
-      ['laufen',  'Verb', 'true', 'false', 'lauf',  'laufen',  ',e', ''],
-      ['brennen', 'Verb', 'true', 'false', 'brenn', 'brennen', ',e', ''],
-      ['singen',  'Verb', 'true', 'false', 'sing',  'singen',  ',e', ''],
+      ['key', 'wortart', 'erst', 'zweit', 'stamm', 'infinitiv', 'fuge_erst', 'fuge_zweit', 'kategorie', 'kategorie_weitere'],
+      ['laufen',  'Verb', 'true', 'false', 'lauf',  'laufen',  ',e', '', 'Handlung', ''],
+      ['brennen', 'Verb', 'true', 'false', 'brenn', 'brennen', ',e', '', 'Handlung', ''],
+      ['singen',  'Verb', 'true', 'false', 'sing',  'singen',  ',e', '', 'Handlung', ''],
     ],
     notes: [
       'key        = Infinitiv oder eindeutiger Name',
@@ -76,10 +76,10 @@ const ODS_TEMPLATES = [
     filename:  'vorlage-adjektive.ods',
     sheetName: 'Adjektive',
     data: [
-      ['key', 'wortart', 'erst', 'zweit', 'stamm', 'positiv', 'komparativ', 'superlativ', 'fuge_erst', 'fuge_zweit'],
-      ['dunkel',  'Adjektiv', 'true', 'false', 'dunkel',  'dunkel',  'dunkler',  'dunkelst',  ',e', ''],
-      ['groß',    'Adjektiv', 'true', 'false', 'groß',    'groß',    'größer',   'größt',     '',   ''],
-      ['schnell', 'Adjektiv', 'true', 'false', 'schnell', 'schnell', 'schneller','schnellst', ',e', ''],
+      ['key', 'wortart', 'erst', 'zweit', 'stamm', 'positiv', 'komparativ', 'superlativ', 'fuge_erst', 'fuge_zweit', 'kategorie', 'kategorie_weitere'],
+      ['dunkel',  'Adjektiv', 'true', 'false', 'dunkel',  'dunkel',  'dunkler',  'dunkelst',  ',e', '', 'Modifikator > Sinneseindruck', ''],
+      ['groß',    'Adjektiv', 'true', 'false', 'groß',    'groß',    'größer',   'größt',     '',   '', 'Modifikator > Oberfläche & Form', ''],
+      ['schnell', 'Adjektiv', 'true', 'false', 'schnell', 'schnell', 'schneller','schnellst', ',e', '', '', ''],
     ],
     notes: [
       'key        = Adjektiv in Grundform',
@@ -95,10 +95,10 @@ const ODS_TEMPLATES = [
     filename:  'vorlage-praepositionen.ods',
     sheetName: 'Präpositionen',
     data: [
-      ['key', 'wortart', 'erst', 'zweit', 'stamm', 'grundform', 'fuge_erst', 'fuge_zweit'],
-      ['über',  'Präposition', 'true', 'false', 'über',  'über',  '', ''],
-      ['unter', 'Präposition', 'true', 'false', 'unter', 'unter', '', ''],
-      ['vor',   'Präposition', 'true', 'false', 'vor',   'vor',   '', ''],
+      ['key', 'wortart', 'erst', 'zweit', 'stamm', 'grundform', 'fuge_erst', 'fuge_zweit', 'kategorie', 'kategorie_weitere'],
+      ['über',  'Präposition', 'true', 'false', 'über',  'über',  '', '', '', ''],
+      ['unter', 'Präposition', 'true', 'false', 'unter', 'unter', '', '', '', ''],
+      ['vor',   'Präposition', 'true', 'false', 'vor',   'vor',   '', '', '', ''],
     ],
     notes: [
       'grundform = Unveränderliche Form der Präposition',
@@ -110,9 +110,9 @@ const ODS_TEMPLATES = [
     filename:  'vorlage-adverbien.ods',
     sheetName: 'Adverbien',
     data: [
-      ['key', 'wortart', 'erst', 'zweit', 'stamm', 'grundform', 'fuge_erst', 'fuge_zweit'],
-      ['immer', 'Adverb', 'true', 'false', 'immer', 'immer', '', ''],
-      ['hoch',  'Adverb', 'true', 'false', 'hoch',  'hoch',  '', ''],
+      ['key', 'wortart', 'erst', 'zweit', 'stamm', 'grundform', 'fuge_erst', 'fuge_zweit', 'kategorie', 'kategorie_weitere'],
+      ['immer', 'Adverb', 'true', 'false', 'immer', 'immer', '', '', '', ''],
+      ['hoch',  'Adverb', 'true', 'false', 'hoch',  'hoch',  '', '', '', ''],
     ],
     notes: ['grundform = Unveränderliche Adverbform'],
   },
@@ -121,9 +121,9 @@ const ODS_TEMPLATES = [
     filename:  'vorlage-partikel.ods',
     sheetName: 'Partikel',
     data: [
-      ['key', 'wortart', 'erst', 'zweit', 'stamm', 'grundform', 'fuge_erst', 'fuge_zweit'],
-      ['ur',  'Partikel', 'true', 'false', 'ur',  'ur',  '', ''],
-      ['erz', 'Partikel', 'true', 'false', 'erz', 'erz', '', ''],
+      ['key', 'wortart', 'erst', 'zweit', 'stamm', 'grundform', 'fuge_erst', 'fuge_zweit', 'kategorie', 'kategorie_weitere'],
+      ['ur',  'Partikel', 'true', 'false', 'ur',  'ur',  '', '', '', ''],
+      ['erz', 'Partikel', 'true', 'false', 'erz', 'erz', '', '', '', ''],
     ],
     notes: ['Verstärkungspartikel als Präfix: Ur-wald, Erz-berg'],
   },
@@ -182,6 +182,8 @@ function downloadODSTemplate(wortartKey) {
       const [col, ...rest] = n.split('=');
       return [col.trim(), rest.join('=').trim()];
     }),
+    ['kategorie', 'Hauptkategorie (optional). Gleiche Hauptkategorie = semantisch redundant, der Namensgenerator kombiniert sie nicht. Pfad (z. B. "Material > Edelstein") oder ID; Auswahl siehe Blatt "Kategorien".'],
+    ['kategorie_weitere', 'Weitere Kategorien (optional), Komma-getrennt. Blockieren nichts. Leer lassen für keine.'],
     [],
     ['Fuge-Format', 'Komma-separierte Werte innerhalb der Zelle'],
     ['Beispiel',    '",s" → ["", "s"]  (keine Fuge + s-Fuge)'],
@@ -192,6 +194,15 @@ function downloadODSTemplate(wortartKey) {
   const wsNotes = XLSX.utils.aoa_to_sheet(notesData);
   wsNotes['!cols'] = [{ wch: 16 }, { wch: 60 }];
   XLSX.utils.book_append_sheet(wb, wsNotes, 'Legende');
+
+  // ── Kategorien-Blatt (aktuelle Taxonomie inkl. eigener Kategorien) ──
+  if (typeof taxFlatten === 'function') {
+    const katData = [['Pfad', 'ID']];
+    taxFlatten().forEach(({ node }) => katData.push([taxLabel(node.id), node.id]));
+    const wsKat = XLSX.utils.aoa_to_sheet(katData);
+    wsKat['!cols'] = [{ wch: 44 }, { wch: 30 }];
+    XLSX.utils.book_append_sheet(wb, wsKat, 'Kategorien');
+  }
 
   // ── Write + download ───────────────────────────────────────────
   try {

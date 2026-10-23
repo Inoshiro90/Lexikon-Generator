@@ -1532,3 +1532,31 @@ button { cursor: pointer; font-family: inherit; }
   font-size: 11px;
   line-height: 1.5;
 }
+
+/* ================================================================
+   Semantische Kategorien: Verwaltung, Sammelzuweisung
+   ================================================================ */
+.tax-card, #lexikonLoader .card { margin-bottom: 12px; }
+#taxonomyPanel, #lexikonLoader { margin-top: 12px; }
+.tax-help { font-size: 12px; opacity: .75; margin: 6px 0 8px; line-height: 1.45; }
+.tax-hint { font-weight: 400; opacity: .6; margin-left: 6px; text-transform: none; letter-spacing: 0; }
+.tax-list { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; }
+.tax-row { display: flex; align-items: center; gap: 6px; padding-top: 2px; padding-bottom: 2px; font-size: 13px; }
+.tax-row:hover { background: rgba(0,0,0,.035); }
+[data-theme="dark"] .tax-row:hover { background: rgba(255,255,255,.05); }
+.tax-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tax-own { font-style: italic; }
+.tax-actions { display: inline-flex; align-items: center; gap: 2px; opacity: .35; transition: opacity .12s; }
+.tax-row:hover .tax-actions, .tax-row:focus-within .tax-actions { opacity: 1; }
+.tax-flag { font-size: 11px; display: inline-flex; align-items: center; gap: 3px; margin-right: 4px; cursor: pointer; }
+.tax-footer { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.col-sel { width: 28px; text-align: center; }
+.bulk-bar { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.bulk-bar .bulk-kat { max-width: 220px; padding-top: 3px; padding-bottom: 3px; font-size: 12px; }
+.cell-select[multiple] { min-width: 170px; }
+
+.tax-seed { font-size: 12px; margin: 6px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tax-seed-list { max-height: 240px; overflow-y: auto; border: 1px solid rgba(0,0,0,.1); border-radius: 6px; padding: 4px 6px; margin: 6px 0; }
+[data-theme="dark"] .tax-seed-list { border-color: rgba(255,255,255,.14); }
+.tax-seed-row { display: flex; gap: 6px; align-items: baseline; font-size: 12px; padding: 1px 0; cursor: pointer; }
+.tax-seed-word { font-weight: 600; min-width: 90px; }

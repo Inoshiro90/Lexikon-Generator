@@ -76,11 +76,58 @@ const WORTART_PREVIEW_COLS = {
   ],
 };
 
-/** Laufzeit-Lookup: entryKey → { wortart, entry } für Edit-Callbacks // hinzugefügt */
+/* ── Semantische Kategorie: zusätzliche Spalten für jede Wortart ── */
+
+/** Schreibt Hauptkategorie / weitere Kategorien in entry.semantik und räumt auf. */
+function _applySemantik(entry, primaer, weitere) {
+  const cur = entry.semantik || { primaer: null, weitere: [] };
+  if (primaer !== undefined) cur.primaer = primaer || null;
+  if (weitere !== undefined) cur.weitere = weitere;
+  cur.weitere = (cur.weitere || []).filter((id, i, a) => id && id !== cur.primaer && a.indexOf(id) === i);
+  if (!cur.primaer && cur.weitere.length === 0) delete entry.semantik;
+  else entry.semantik = cur;
+}
+
+Object.keys(WORTART_PREVIEW_COLS).forEach(w => {
+  WORTART_PREVIEW_COLS[w].push(
+    {
+      key: 'kategorie', label: 'Kategorie', type: 'kat',
+      get: (k, e) => (e.semantik && e.semantik.primaer) ? taxLabel(e.semantik.primaer) : '',
+      getValue: (e) => (e.semantik && e.semantik.primaer) || '',
+      set: (e, v) => { _applySemantik(e, v || null, undefined); },
+    },
+    {
+      key: 'weitere', label: 'Weitere', type: 'katmulti',
+      get: (k, e) => ((e.semantik && e.semantik.weitere) || []).map(id => taxLabel(id)).join(', '),
+      getValue: (e) => (e.semantik && e.semantik.weitere) || [],
+      set: (e, v) => { _applySemantik(e, undefined, Array.isArray(v) ? v : []); },
+    },
+  );
+});
+
+/** <option>-Liste der Taxonomie (eingerückt). selected: Set von ids. */
+function _katOptionsHtml(selected, withEmpty) {
+  const sel = selected || new Set();
+  let html = withEmpty ? `<option value="" ${sel.size === 0 ? 'selected' : ''}>— keine —</option>` : '';
+  taxFlatten().forEach(({ node, depth }) => {
+    html += `<option value="${escHtml(node.id)}" ${sel.has(node.id) ? 'selected' : ''}>` +
+      `${'\u00A0\u00A0'.repeat(depth)}${escHtml(node.name)}</option>`;
+  });
+  // Unbekannte (gelöschte) ids sichtbar halten, damit sie beim Speichern nicht still verloren gehen
+  sel.forEach(id => {
+    if (id && !taxIsKnown(id)) html += `<option value="${escHtml(id)}" selected>⚠ ${escHtml(id)} (unbekannt)</option>`;
+  });
+  return html;
+}
+
+/** Schlüssel für den Lookup: Wortart + Wort (gleiche Wörter in mehreren Wortarten kollidieren nicht). */
+function _previewMapKey(wortart, key) { return `${wortart}\u0000${key}`; }
+
+/** Laufzeit-Lookup: wortart+key → { wortart, entry } für Edit-Callbacks // hinzugefügt */
 let _previewEntryMap = new Map();
 
 /** Callbacks für Löschen und Aktualisieren — gesetzt via initPreviewCallbacks // hinzugefügt */
-let _previewCallbacks = { onDelete: null, onUpdate: null };
+let _previewCallbacks = { onDelete: null, onUpdate: null, onBulkUpdate: null };
 
 /**
  * Setzt die Action-Callbacks für die Vorschau.
@@ -102,7 +149,7 @@ function initPreviewCallbacks(callbacks) {
  * @returns {string} HTML
  */
 function _renderViewRow(wortart, key, entry, cols) {
-  let cells = '';
+  let cells = '<td class="col-sel" data-field="sel"><input type="checkbox" class="row-sel" aria-label="Zeile auswählen"></td>';
   cols.forEach(col => {
     const val = col.get(key, entry);
     if (col.type === 'bool') {
@@ -137,6 +184,7 @@ function _renderWortartSection(wortart, entries) {
   const cols = WORTART_PREVIEW_COLS[wortart] || WORTART_PREVIEW_COLS['Partikel'];
 
   const thead = '<thead><tr>' +
+    '<th class="col-sel"><input type="checkbox" class="sel-all" title="Alle auswählen" aria-label="Alle auswählen"></th>' +
     cols.map(c => `<th>${escHtml(c.label)}</th>`).join('') +
     '<th class="col-actions-head">Aktionen</th>' +
     '</tr></thead>';
@@ -150,6 +198,15 @@ function _renderWortartSection(wortart, entries) {
       <div class="wortart-section-header">
         <span class="wortart-section-label">${escHtml(wortart)}</span>
         <span class="stat-pill stat-pill--active">${entries.length}</span>
+        <div class="bulk-bar">
+          <select class="form-select bulk-kat" aria-label="Kategorie für Auswahl">
+            <option value="" selected disabled>Kategorie für Auswahl…</option>
+            <option value="__clear__">— Kategorie entfernen —</option>
+            ${_katOptionsHtml(new Set(), false)}
+          </select>
+          <button class="btn btn-ghost btn-xs" data-action="bulk-assign"
+                  title="Hauptkategorie für alle angehakten Zeilen setzen">Zuweisen</button>
+        </div>
       </div>
       <div class="preview-wrap">
         <table class="preview-table">${thead}${tbody}</table>
@@ -167,7 +224,7 @@ function renderPreviewGrouped(allEntries) {
   // Lookup-Map aktualisieren
   _previewEntryMap.clear();
   allEntries.forEach(({ key, entry }) => {
-    _previewEntryMap.set(key, { wortart: entry.wortart, entry });
+    _previewEntryMap.set(_previewMapKey(entry.wortart, key), { wortart: entry.wortart, entry });
   });
 
   // Nach Wortart gruppieren (Reihenfolge aus WORTARTEN)
@@ -201,12 +258,15 @@ function _handlePreviewAction(e) {
   const btn = e.target.closest('[data-action]');
   if (!btn) return;
 
+  // Sammelzuweisung: Hauptkategorie für alle angehakten Zeilen einer Sektion
+  if (btn.dataset.action === 'bulk-assign') { _bulkAssign(btn); return; }
+
   const row = btn.closest('tr[data-key]');
   if (!row) return;
 
   const entryKey = row.dataset.key;
   const wortart  = row.dataset.wortart;
-  const info     = _previewEntryMap.get(entryKey);
+  const info     = _previewEntryMap.get(_previewMapKey(wortart, entryKey));
   if (!info) return;
 
   switch (btn.dataset.action) {
@@ -223,6 +283,33 @@ function _handlePreviewAction(e) {
       _cancelEdit(row, wortart, entryKey, info.entry);
       break;
   }
+}
+
+/**
+ * Setzt die Hauptkategorie für alle angehakten Zeilen der Sektion.
+ * Bestehende weitere Kategorien bleiben erhalten.
+ */
+function _bulkAssign(btn) {
+  const section = btn.closest('.wortart-section');
+  if (!section) return;
+  const wortart = section.dataset.section;
+  const select  = section.querySelector('.bulk-kat');
+  const value   = select ? select.value : '';
+  if (!value) { showToast('Bitte zuerst eine Kategorie wählen'); return; }
+
+  const rows = Array.from(section.querySelectorAll('tbody tr[data-key]'))
+    .filter(r => r.querySelector('.row-sel')?.checked);
+  if (!rows.length) { showToast('Keine Zeilen ausgewählt'); return; }
+
+  const updates = [];
+  rows.forEach(r => {
+    const info = _previewEntryMap.get(_previewMapKey(wortart, r.dataset.key));
+    if (!info) return;
+    const updated = JSON.parse(JSON.stringify(info.entry));
+    _applySemantik(updated, value === '__clear__' ? null : value, undefined);
+    updates.push({ key: r.dataset.key, entry: updated });
+  });
+  if (_previewCallbacks.onBulkUpdate) _previewCallbacks.onBulkUpdate(wortart, updates);
 }
 
 /**
@@ -243,6 +330,13 @@ function _enterEditMode(row, wortart, entryKey, entry) {
           <option value="true"  ${val ? 'selected' : ''}>✓ ja</option>
           <option value="false" ${!val ? 'selected' : ''}>— nein</option>
         </select>`;
+    } else if (col.type === 'kat') {
+      const cur = col.getValue(entry);
+      cell.innerHTML =
+        `<select class="cell-select" data-field-input="${col.key}">${_katOptionsHtml(new Set(cur ? [cur] : []), true)}</select>`;
+    } else if (col.type === 'katmulti') {
+      cell.innerHTML =
+        `<select class="cell-select" multiple size="4" data-field-input="${col.key}">${_katOptionsHtml(new Set(col.getValue(entry)), false)}</select>`;
     } else {
       cell.innerHTML =
         `<input class="cell-input" data-field-input="${col.key}"
@@ -275,7 +369,12 @@ function _commitEdit(row, wortart, entryKey, originalEntry) {
   cols.forEach(col => {
     if (!col.set) return;
     const input = row.querySelector(`[data-field-input="${col.key}"]`);
-    if (input) col.set(updatedEntry, input.value);
+    if (!input) return;
+    if (col.type === 'katmulti') {
+      col.set(updatedEntry, Array.from(input.selectedOptions).map(o => o.value));
+    } else {
+      col.set(updatedEntry, input.value);
+    }
   });
 
   if (_previewCallbacks.onUpdate) _previewCallbacks.onUpdate(wortart, entryKey, updatedEntry);
@@ -297,8 +396,13 @@ function _cancelEdit(row, wortart, entryKey, entry) {
  * // hinzugefügt
  */
 function initPreviewEvents() {
-  document.getElementById('previewBody')
-    ?.addEventListener('click', _handlePreviewAction);
+  const body = document.getElementById('previewBody');
+  body?.addEventListener('click', _handlePreviewAction);
+  body?.addEventListener('change', (e) => {
+    if (!e.target.classList.contains('sel-all')) return;
+    const section = e.target.closest('.wortart-section');
+    section?.querySelectorAll('.row-sel').forEach(cb => { cb.checked = e.target.checked; });
+  });
 }
 
 

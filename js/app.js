@@ -34,9 +34,7 @@ const _panels = new Map();
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  
-
-  
+  taxInit();
   _renderImportPanels();
   _bindOptions();
   _bindGenerateBtn();
@@ -57,8 +55,21 @@ document.addEventListener('DOMContentLoaded', () => {
         _refreshAfterEdit();
       }
     },
+    // Sammelzuweisung: alle Änderungen übernehmen, danach einmal neu rendern
+    onBulkUpdate(wortart, updates) {
+      const panel = _panels.get(wortart);
+      if (!panel) return;
+      let n = 0;
+      updates.forEach(({ key, entry }) => { if (panel.updateEntry(key, entry)) n++; });
+      if (n) {
+        showToast(`${n} Eintrag${n !== 1 ? 'e' : ''} aktualisiert`);
+        _refreshAfterEdit();
+      }
+    },
   });
   initPreviewEvents();
+  initTaxonomyPanel();
+  initLexikonLoader();
 });
 
 
@@ -102,7 +113,9 @@ function _renderImportPanels() {
 function _handleImport(wortartKey, entries) {
   const total = _getAllEntries().length;
   setGenerateEnabled(total > 0);
+  if (typeof LEXIKON_BULK_LOADING !== 'undefined' && LEXIKON_BULK_LOADING) return;
   showToast(`${entries.length} ${wortartKey}-Einträge importiert`);
+  if (typeof renderTaxonomyPanel === 'function') renderTaxonomyPanel();
 }
 
 
@@ -155,37 +168,8 @@ function _generate() {
     entries = [...entries].sort((a, b) => a.key.localeCompare(b.key, 'de'));
   }
 
-  // Build lexikon object — geändert: nach Wortart gruppiert
-  //
-  // Mapping: entry.wortart → Kategorie-Key im Output-Objekt
-  const WORTART_TO_KEY = {
-    'Nomen':       'nomen',
-    'Verb':        'verben',
-    'Adjektiv':    'adjektive',
-    'Präposition': 'präpositionen',
-    'Adverb':      'adverbien',
-    'Partikel':    'partikel',
-  };
-
-  // geändert: feste Kategorien in definierter Reihenfolge vorinitialisieren
-  const lexikon = {
-    nomen:         {},
-    verben:        {},
-    adjektive:     {},
-    präpositionen: {},
-    adverbien:     {},
-    partikel:      {},
-  };
-
-  entries.forEach(({ key, entry }) => {
-    const wortart   = entry.wortart ?? '';
-    // geändert: bekannte Wortart → fester Key; unbekannt → lowercase oder "unbekannt"
-    const gruppeKey = WORTART_TO_KEY[wortart]
-      ?? (wortart ? wortart.toLowerCase() : 'unbekannt');
-    // geändert: dynamische Kategorie anlegen, falls Wortart nicht im Mapping
-    if (!lexikon[gruppeKey]) lexikon[gruppeKey] = {};
-    lexikon[gruppeKey][key] = entry;
-  });
+  // Build lexikon object: nach Wortart gruppiert, Taxonomie eingebettet (als letzter Schlüssel)
+  const lexikon = buildLexikonObject(entries, taxSerialize());
 
   // Validate
   renderValidation(validateLexikon(entries));
@@ -226,6 +210,7 @@ function _getAllEntries() {
 function _refreshAfterEdit() {
   const entries = _getAllEntries();
   setGenerateEnabled(entries.length > 0);
+  if (typeof renderTaxonomyPanel === 'function') renderTaxonomyPanel();
   if (entries.length) {
     renderPreviewGrouped(entries);
     if (_outputString) _generate();

@@ -13,19 +13,18 @@ function _simpleRow(row) {
   const stamm    = str(row['stamm']);
   const grundform = str(row['grundform'] || row['stamm']);
 
-  return {
-    key,
-    entry: {
-      wortart,
-      position: { erst: istErst, zweit: istZweit },
-      stamm,
-      formen: { grundform },
-      fuge: {
-        als_erst:  resolveFuge(row['fuge_erst'] ?? '', istErst),
-        als_zweit: resolveFuge(row['fuge_zweit'],      istZweit),
-      },
+  const entry = {
+    wortart,
+    position: { erst: istErst, zweit: istZweit },
+    stamm,
+    formen: { grundform },
+    fuge: {
+      als_erst:  resolveFuge(row['fuge_erst'] ?? '', istErst),
+      als_zweit: resolveFuge(row['fuge_zweit'],      istZweit),
     },
   };
+  taxApplyToEntry(entry, row, key);
+  return { key, entry };
 }
 
 function getPraepositionTemplate() {

@@ -20,13 +20,38 @@ const _VALID_WORTARTEN = new Set([
 function validateLexikon(entries) {
   const issues = [];
   const seen   = new Set();
+  const stammGroups = new Map();   // stamm (casefold) → [key, …]
 
   entries.forEach(({ key, entry }) => {
 
-    if (seen.has(key)) {
+    // Schlüssel sind je Wortart eindeutig (die Ausgabe ist nach Wortart gruppiert)
+    const scopedKey = `${str(entry.wortart).toLowerCase()}\u0000${key}`;
+    if (seen.has(scopedKey)) {
       issues.push({ type: 'err', msg: `"${key}": doppelter Schlüssel` });
     }
-    seen.add(key);
+    seen.add(scopedKey);
+
+    if (entry.stamm) {
+      const sk = str(entry.stamm).toLowerCase();
+      if (!stammGroups.has(sk)) stammGroups.set(sk, []);
+      stammGroups.get(sk).push(key);
+    }
+
+    // Semantische Zuordnung (optional)
+    if (entry.semantik && typeof taxIsKnown === 'function') {
+      const { primaer, weitere } = entry.semantik;
+      if (primaer && !taxIsKnown(primaer)) {
+        issues.push({ type: 'warn', msg: `"${key}": Kategorie "${primaer}" existiert nicht (mehr)` });
+      }
+      (Array.isArray(weitere) ? weitere : []).forEach((id) => {
+        if (!taxIsKnown(id)) {
+          issues.push({ type: 'warn', msg: `"${key}": weitere Kategorie "${id}" existiert nicht (mehr)` });
+        }
+      });
+      if (!primaer && Array.isArray(weitere) && weitere.length > 0) {
+        issues.push({ type: 'warn', msg: `"${key}": weitere Kategorien ohne Hauptkategorie – blockiert nie` });
+      }
+    }
 
     if (!entry.stamm) {
       issues.push({ type: 'err', msg: `"${key}": Stamm fehlt` });
@@ -41,6 +66,15 @@ function validateLexikon(entries) {
 
     if (!entry.position?.erst && !entry.position?.zweit) {
       issues.push({ type: 'warn', msg: `"${key}": weder erst noch zweit gesetzt` });
+    }
+  });
+
+  // Gleicher Stamm bei verschiedenen Schlüsseln: der Namensgenerator bildet daraus
+  // keine Komposita miteinander (z. B. "Frau" + "Frauen" → "Fraufrau" wird verhindert).
+  stammGroups.forEach((keys, stamm) => {
+    const uniq = [...new Set(keys)];
+    if (uniq.length > 1) {
+      issues.push({ type: 'warn', msg: `Gleicher Stamm "${stamm}": ${uniq.map(k => `"${k}"`).join(', ')} – werden nicht miteinander kombiniert` });
     }
   });
 
