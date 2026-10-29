@@ -115,7 +115,9 @@ function _handleImport(wortartKey, entries) {
   setGenerateEnabled(total > 0);
   if (typeof LEXIKON_BULK_LOADING !== 'undefined' && LEXIKON_BULK_LOADING) return;
   showToast(`${entries.length} ${wortartKey}-Einträge importiert`);
-  if (typeof renderTaxonomyPanel === 'function') renderTaxonomyPanel();
+  // Vorschau sofort zeigen (bearbeitbar), ohne erst „JSON generieren“ drücken zu müssen;
+  // eine bereits erzeugte Ausgabe wird dabei mit erneuert.
+  _refreshAfterEdit();
 }
 
 
@@ -130,7 +132,7 @@ function _bindOptions() {
   if (formatSelect) {
     formatSelect.addEventListener('change', function () {
       const show = this.value !== 'json';
-      if (varNameGroup) varNameGroup.style.display = show ? '' : 'none';
+      if (varNameGroup) varNameGroup.hidden = !show;
     });
   }
 

@@ -1,0 +1,87 @@
+/* ================================================================
+   components/buttons.css — Button-System
+
+   Eine Basisklasse (.btn) + Variante + optional Größe/Form:
+     Variante : .btn-primary | .btn-secondary | .btn-ghost | .btn-danger
+     Größe    : (Standard 44 px) | .btn-sm (kompakt)
+     Form     : .btn-icon (quadratisch, nur Icon; braucht aria-label)
+     Breite   : .btn-full
+   Ersetzt die früheren Einzelklassen .btn-blue, .btn-xs, .tax-btn,
+   .tax-btn-text, .tax-btn-primary, .preview-action-btn, .import-panel-toggle
+   und die zusätzlichen Touch-Overrides.
+
+   Größen: min-height statt height → mehrzeilige Beschriftungen und
+   Textvergrößerung schneiden nichts ab. Kompakt = --btn-h-compact
+   (32 px mit Maus, 44 px bei grobem Zeigegerät, siehe tokens.css).
+   Beschriftungen dürfen umbrechen (kein white-space:nowrap).
+   ================================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--btn-h);
+  min-width: var(--target-min);
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid transparent;
+  border-radius: var(--radius-micro);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-nav);
+  font-weight: var(--fw-semibold);
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--dur-base) var(--ease), color var(--dur-base) var(--ease),
+              border-color var(--dur-base) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn svg { flex-shrink: 0; }
+
+/* Deaktiviert: gedämpft, aber mit Rahmen/Text weiterhin als Schaltfläche erkennbar */
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* --- Varianten --- */
+.btn-primary { background: var(--btn-primary-bg); color: var(--btn-primary-text); }
+.btn-primary:hover:not(:disabled) { background: var(--btn-primary-bg-hover); }
+
+.btn-secondary { background: var(--hover-bg); color: var(--text-primary); border-color: var(--border-color); }
+.btn-secondary:hover:not(:disabled) { background: var(--hover-bg-strong); }
+
+.btn-ghost { color: var(--text-secondary); border-color: var(--border-color); }
+.btn-ghost:hover:not(:disabled) { background: var(--bg-warm); color: var(--text-primary); }
+
+.btn-danger { background: var(--btn-danger-bg); color: var(--btn-danger-text); }
+.btn-danger:hover:not(:disabled) { background: var(--btn-danger-bg-hover); }
+
+/* Zustand „kopiert" (JS setzt .copied vorübergehend) */
+.btn.copied { background: var(--tint-success); color: var(--color-success); border-color: var(--color-success); }
+
+/* --- Größen / Formen --- */
+.btn-sm {
+  min-height: var(--btn-h-compact);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-small);
+}
+.btn-full { width: 100%; }
+
+/* Icon-Button: Trefferfläche = Button (nicht das Icon); Standardgröße kompakt */
+.btn-icon {
+  min-width: var(--btn-h-compact);
+  min-height: var(--btn-h-compact);
+  padding: 0;
+  border-color: transparent;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.btn-icon.btn-secondary { border-color: var(--border-color); }
+.btn-icon:hover:not(:disabled) { background: var(--hover-bg-strong); color: var(--text-primary); }
+.btn-icon.btn-danger-quiet:hover:not(:disabled) { color: var(--color-danger); }
+.btn-icon.btn-primary { color: var(--btn-primary-text); }
+.btn-icon.btn-primary:hover:not(:disabled) { background: var(--btn-primary-bg-hover); color: var(--btn-primary-text); }
+.btn-icon.btn-secondary:hover:not(:disabled) { background: var(--hover-bg-strong); }

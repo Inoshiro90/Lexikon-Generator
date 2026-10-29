@@ -51,45 +51,45 @@ function createImportPanel(config, callbacks = {}) {
         <span class="import-panel-name">${escHtml(config.label)}</span>
         <span class="stat-pill import-count" id="${pid}-count">0</span>
       </div>
-      <button class="import-panel-toggle btn-icon" aria-expanded="${isOpen}"
-              aria-controls="${pid}-body" title="${escHtml(config.label)} ein-/ausklappen">
+      <button type="button" class="btn btn-icon import-panel-toggle" aria-expanded="${isOpen}"
+              aria-controls="${pid}-body" aria-label="${escHtml(config.label)} ein-/ausklappen" title="${escHtml(config.label)} ein-/ausklappen">
         <span class="chevron-icon">${icon('chevron-down', 14)}</span>
       </button>
     </header>
 
     <div class="import-panel-body" id="${pid}-body" ${isOpen ? '' : 'hidden'}>
 
-      <div class="mini-tabs" role="tablist">
-        <button class="mini-tab active" role="tab" data-tab="paste"
-                aria-selected="true" aria-controls="${pid}-paste">
+      <div class="mini-tabs" role="tablist" aria-label="Importart ${escHtml(config.label)}">
+        <button type="button" class="mini-tab active" role="tab" data-tab="paste" id="${pid}-tab-paste"
+                aria-selected="true" aria-controls="${pid}-paste" tabindex="0">
           ${icon('clipboard', 13)} Einfügen
         </button>
-        <button class="mini-tab" role="tab" data-tab="file"
-                aria-selected="false" aria-controls="${pid}-file-panel">
+        <button type="button" class="mini-tab" role="tab" data-tab="file" id="${pid}-tab-file"
+                aria-selected="false" aria-controls="${pid}-file-panel" tabindex="-1">
           ${icon('upload', 13)} Datei
         </button>
       </div>
 
-      <div class="import-section" id="${pid}-paste" role="tabpanel">
+      <div class="import-section" id="${pid}-paste" role="tabpanel" aria-labelledby="${pid}-tab-paste">
         <p class="format-hint-row">${icon('file-text', 11)}
           CSV · JSON · XML · Markdown · HTML · TSV</p>
         <textarea class="paste-area paste-area--sm" id="${pid}-textarea"
           placeholder="Daten einfügen — Format wird automatisch erkannt&#10;(CSV, JSON, XML, Markdown-Tabelle, HTML-Tabelle, TSV, …)"
           spellcheck="false" rows="4"></textarea>
         <div class="import-row">
-          <button class="btn btn-primary btn-sm" id="${pid}-import-paste">
+          <button type="button" class="btn btn-primary btn-sm" id="${pid}-import-paste">
             ${icon('play', 13)} Importieren
           </button>
-          <button class="btn btn-ghost btn-sm" id="${pid}-clear-paste" title="Leeren">
+          <button type="button" class="btn btn-ghost btn-icon" id="${pid}-clear-paste" title="Leeren" aria-label="Eingabe leeren">
             ${icon('trash-2', 13)}
           </button>
           <span class="format-badge hidden" id="${pid}-fmt-badge"></span>
         </div>
       </div>
 
-      <div class="import-section hidden" id="${pid}-file-panel" role="tabpanel">
+      <div class="import-section hidden" id="${pid}-file-panel" role="tabpanel" aria-labelledby="${pid}-tab-file">
         <div class="drop-zone drop-zone--sm" id="${pid}-dropzone">
-          <input type="file" accept="${ACCEPTED_EXTENSIONS}" id="${pid}-file-input" tabindex="-1" />
+          <input type="file" accept="${ACCEPTED_EXTENSIONS}" id="${pid}-file-input" aria-label="Datei für ${escHtml(config.label)} auswählen" />
           <span class="drop-icon" aria-hidden="true">${icon('upload', 20)}</span>
           <div class="drop-label">
             <strong>Datei wählen</strong> oder ablegen
@@ -97,16 +97,16 @@ function createImportPanel(config, callbacks = {}) {
           </div>
         </div>
         <div class="import-row">
-          <button class="btn btn-primary btn-sm" id="${pid}-import-file" disabled>
+          <button type="button" class="btn btn-primary btn-sm" id="${pid}-import-file" disabled>
             ${icon('play', 13)} Importieren
           </button>
           <span class="format-badge hidden" id="${pid}-file-fmt-badge"></span>
         </div>
       </div>
 
-      <div class="import-status hidden" id="${pid}-status"></div>
+      <div class="import-status hidden" id="${pid}-status" role="status"></div>
 
-      <button class="btn btn-ghost btn-sm import-template-btn" id="${pid}-template">
+      <button type="button" class="btn btn-ghost btn-sm import-template-btn" id="${pid}-template">
         ${icon('download', 13)} ODS-Vorlage
       </button>
     </div>
@@ -143,15 +143,30 @@ function createImportPanel(config, callbacks = {}) {
 	}
 
 	// ── Mini Tabs
-	miniTabs.forEach((tab) => {
-		tab.addEventListener('click', () => {
-			_activeTab = tab.dataset.tab;
-			miniTabs.forEach((t) => {
-				t.classList.toggle('active', t.dataset.tab === _activeTab);
-				t.setAttribute('aria-selected', String(t.dataset.tab === _activeTab));
-			});
-			pasteSection.classList.toggle('hidden', _activeTab !== 'paste');
-			fileSection.classList.toggle('hidden', _activeTab !== 'file');
+	function _selectTab(tab, focus) {
+		_activeTab = tab.dataset.tab;
+		miniTabs.forEach((t) => {
+			const on = t.dataset.tab === _activeTab;
+			t.classList.toggle('active', on);
+			t.setAttribute('aria-selected', String(on));
+			t.tabIndex = on ? 0 : -1;               // Roving tabindex: nur der aktive Tab ist per Tab erreichbar
+		});
+		pasteSection.classList.toggle('hidden', _activeTab !== 'paste');
+		fileSection.classList.toggle('hidden', _activeTab !== 'file');
+		if (focus) tab.focus();
+	}
+	const _tabList = Array.from(miniTabs);
+	_tabList.forEach((tab) => {
+		tab.addEventListener('click', () => _selectTab(tab, false));
+		// ARIA-Tab-Muster: Pfeiltasten wechseln den Tab, Home/Ende springen zum ersten/letzten
+		tab.addEventListener('keydown', (e) => {
+			const i = _tabList.indexOf(tab);
+			let next = null;
+			if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = _tabList[(i + 1) % _tabList.length];
+			else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = _tabList[(i - 1 + _tabList.length) % _tabList.length];
+			else if (e.key === 'Home') next = _tabList[0];
+			else if (e.key === 'End') next = _tabList[_tabList.length - 1];
+			if (next) { e.preventDefault(); _selectTab(next, true); }
 		});
 	});
 

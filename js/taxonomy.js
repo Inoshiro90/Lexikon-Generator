@@ -20,7 +20,9 @@
 /* eslint-disable no-unused-vars */
 
 const TAX_STORAGE_KEY = 'lexikon-taxonomie-v1';
-const TAX_VERSION = 1;
+const TAX_VERSION = 2;
+/** Die Tabelle zeigt höchstens diese Anzahl Ebenen (Kategorie_1 … Kategorie_5). */
+const TAX_MAX_DEPTH = 5;
 const TAX_SEPARATOR = ' > ';
 
 /** @type {Map<string, {id:string,name:string,parent:string|null,eigen:boolean,blockiereTeilbaum:boolean}>|null} */
@@ -28,6 +30,9 @@ let _taxNodes = null;
 
 /** Warnungen des laufenden Imports (werden vom Import-Panel ausgelesen). */
 let TAX_IMPORT_WARNINGS = [];
+
+/** Hinweise zur Migration einer gespeicherten Taxonomie (einmalig im Panel angezeigt). */
+let TAX_MIGRATION_NOTES = [];
 
 const _taxListeners = [];
 
@@ -45,13 +50,30 @@ function taxDefaultNodes() {
 	return map;
 }
 
-/** Laedt gespeicherte Taxonomie (localStorage) oder den Standardbaum. */
+/**
+ * Laedt gespeicherte Taxonomie (localStorage) oder den Standardbaum.
+ * Aeltere Staende (Version < 2 bzw. mit der aufgeloesten Oberkategorie „Goettliches“)
+ * werden gezielt migriert; Hinweise stehen danach in TAX_MIGRATION_NOTES.
+ */
 function taxInit() {
 	let nodes = null;
+	TAX_MIGRATION_NOTES = [];
 	try {
 		if (typeof localStorage !== 'undefined') {
 			const raw = localStorage.getItem(TAX_STORAGE_KEY);
-			if (raw) nodes = taxDeserialize(JSON.parse(raw));
+			if (raw) {
+				const stored = JSON.parse(raw);
+				const version = Number(stored && stored.version) || 1;
+				const mig = taxMigrateSerialized(stored, { addNewDefaults: version < TAX_VERSION });
+				const warnings = [];
+				nodes = taxDeserialize(mig.obj, warnings);
+				TAX_MIGRATION_NOTES.push(...mig.notes, ...warnings);
+				if (nodes.size > 0) {
+					TAX_MIGRATION_NOTES.push(...taxDepthNotes(nodes));
+					_taxNodes = nodes;
+					if (mig.changed || version < TAX_VERSION) taxPersist();   // migrierten Stand sichern
+				}
+			}
 		}
 	} catch (e) {
 		nodes = null;
@@ -86,6 +108,9 @@ function taxPersist() {
 }
 
 function taxOnChange(fn) { _taxListeners.push(fn); }
+
+/** Migrationshinweise als gelesen markieren (Panel blendet sie aus). */
+function taxClearMigrationNotes() { TAX_MIGRATION_NOTES = []; }
 
 function taxEmit(evt) {
 	for (const fn of _taxListeners) {
@@ -146,6 +171,192 @@ function taxFlatten(nodes) {
 	return out;
 }
 
+// ── Ebenen (Tabellenspalten Kategorie_1 … Kategorie_5) ───────
+
+/** Tiefe eines Knotens (Wurzel = 1; 0 bei unbekannter id). */
+function taxDepth(id, nodes) {
+	return taxPath(id, nodes).length;
+}
+
+/** Hinweise zu Kategorien, die tiefer als TAX_MAX_DEPTH liegen (nichts wird veraendert). */
+function taxDepthNotes(nodes) {
+	const map = nodes || taxGetNodes();
+	const deep = [...map.keys()].filter(id => taxDepth(id, map) > TAX_MAX_DEPTH);
+	if (!deep.length) return [];
+	return [`${deep.length} Kategorie(n) liegen tiefer als ${TAX_MAX_DEPTH} Ebenen (z. B. „${taxLabel(deep[0], map)}“). ` +
+		`Die Tabelle zeigt nur ${TAX_MAX_DEPTH} Ebenen; die Zuordnung bleibt erhalten. Neue Kategorien dieser Tiefe sind nicht möglich.`];
+}
+
+/**
+ * Pfad einer Kategorie als Spaltenwerte.
+ * @returns {{ levels: ({id:string,name:string}|null)[], deep: boolean, unknown: boolean }}
+ *   levels hat immer genau `count` Eintraege; deep = Pfad laenger als count;
+ *   unknown = id ist gesetzt, existiert aber nicht in der Taxonomie.
+ */
+function taxPathColumns(id, nodes, count) {
+	const map = nodes || taxGetNodes();
+	const n = count || TAX_MAX_DEPTH;
+	const levels = new Array(n).fill(null);
+	if (!id) return { levels, deep: false, unknown: false };
+	const path = taxPath(id, map);
+	if (!path.length) return { levels, deep: false, unknown: true };
+	path.slice(0, n).forEach((pid, i) => { levels[i] = { id: pid, name: map.get(pid).name }; });
+	return { levels, deep: path.length > n, unknown: false };
+}
+
+/**
+ * Auswahlmoeglichkeiten fuer eine Ebene (1-basiert) bei bisheriger Auswahl.
+ * Ebene 1: Oberkategorien; Ebene n: direkte Kinder der Auswahl auf Ebene n-1.
+ * @param {number} level
+ * @param {string[]} selection  Kategorie-ids je Ebene ('' = leer)
+ */
+function taxColumnOptions(level, selection, nodes) {
+	const map = nodes || taxGetNodes();
+	if (level === 1) return taxChildren(null, map);
+	const parent = selection[level - 2];
+	return parent && map.has(parent) ? taxChildren(parent, map) : [];
+}
+
+/**
+ * Abhaengige Dropdowns: setzt Ebene `level` auf `value` und leert alle tieferen Ebenen.
+ * @returns {string[]} neue Auswahl (Kopie)
+ */
+function taxCascade(selection, level, value) {
+	const next = Array.from({ length: TAX_MAX_DEPTH }, (_, i) => selection[i] || '');
+	next[level - 1] = value || '';
+	for (let i = level; i < TAX_MAX_DEPTH; i++) next[i] = '';
+	return next;
+}
+
+/**
+ * Uebersetzt die Dropdown-Auswahl in eine Kategorie-id.
+ * Alle Ebenen bilden EINEN Pfad: lueckenlos, jede Ebene ein Kind der vorherigen.
+ * @returns {{ id: string|null, error: string|null }}  alles leer → { id: null, error: null }
+ */
+function taxSelectionToId(selection, nodes) {
+	const map = nodes || taxGetNodes();
+	const sel = Array.from({ length: TAX_MAX_DEPTH }, (_, i) => String(selection[i] || ''));
+	let last = -1;
+	sel.forEach((v, i) => { if (v) last = i; });
+	if (last < 0) return { id: null, error: null };
+	let prev = null;
+	for (let i = 0; i <= last; i++) {
+		const id = sel[i];
+		if (!id) return { id: null, error: `Kategorie_${i + 1} ist leer, aber eine tiefere Ebene ist gewählt.` };
+		const node = map.get(id);
+		if (!node) return { id: null, error: `Kategorie_${i + 1}: „${id}“ existiert nicht.` };
+		if ((node.parent || null) !== prev) return { id: null, error: `Kategorie_${i + 1}: „${node.name}“ gehört nicht zur Auswahl darüber.` };
+		prev = id;
+	}
+	return { id: sel[last], error: null };
+}
+
+/**
+ * Loest Anzeigenamen (oder ids) je Ebene zu einem Pfad auf, z. B. ['Material', 'Edelstein'].
+ * @returns {{ id: string|null, error: string|null }}  alles leer → { id: null, error: null }
+ */
+function taxResolveColumns(names, nodes) {
+	const map = nodes || taxGetNodes();
+	const cells = Array.from({ length: TAX_MAX_DEPTH }, (_, i) => String(names[i] == null ? '' : names[i]).trim());
+	let last = -1;
+	cells.forEach((v, i) => { if (v) last = i; });
+	if (last < 0) return { id: null, error: null };
+	const chosen = [];
+	let parent = null;
+	for (let i = 0; i <= last; i++) {
+		const cell = cells[i];
+		if (!cell) return { id: null, error: `Kategorie_${i + 1} ist leer, aber Kategorie_${last + 1} gefüllt.` };
+		const low = cell.toLowerCase();
+		const hit = taxChildren(parent, map).find(n => n.id.toLowerCase() === low || n.name.toLowerCase() === low);
+		if (!hit) {
+			const where = parent ? `unter „${map.get(parent).name}“` : 'auf oberster Ebene';
+			return { id: null, error: `Kategorie_${i + 1} „${cell}“ gibt es ${where} nicht.` };
+		}
+		chosen.push(hit.id);
+		parent = hit.id;
+	}
+	return { id: parent, error: null };
+}
+
+// ── Migration älterer Taxonomien ─────────────────────────────
+
+/**
+ * Migriert eine serialisierte Taxonomie (Export-Form) auf den aktuellen Stand:
+ *  - „Göttliches > Domäne & Aspekt“ wird nach „Konzept > Domäne & Aspekt“ verschoben
+ *    (Name, eigene Unterkategorien bleiben erhalten),
+ *  - „Göttliches“ und „Beiname & Archetyp“ werden aufgelöst; eigene Unterkategorien
+ *    daruntern stehen danach auf oberster Ebene (nichts wird gelöscht),
+ *  - bei addNewDefaults werden die neuen Standardknoten ergänzt.
+ * Idempotent; verändert das Eingabeobjekt nicht.
+ * @returns {{ obj: Object, notes: string[], changed: boolean }}
+ */
+function taxMigrateSerialized(input, opts) {
+	const addNewDefaults = !!(opts && opts.addNewDefaults);
+	const notes = [];
+	let changed = false;
+	if (!input || typeof input !== 'object' || !input.knoten || typeof input.knoten !== 'object') {
+		return { obj: input, notes, changed };
+	}
+	const knoten = {};
+	for (const [id, v] of Object.entries(input.knoten)) knoten[id] = (v && typeof v === 'object') ? { ...v } : v;
+	const M = TAXONOMY_MIGRATION;
+	const nameOf = id => (knoten[id] && knoten[id].name) || id;
+	const reparent = (fromId, toId) => {
+		Object.values(knoten).forEach(n => { if (n && typeof n === 'object' && n.parent === fromId) n.parent = toId; });
+	};
+
+	// 1) verschobene Knoten
+	for (const [oldId, newId] of Object.entries(M.LEGACY_IDS)) {
+		if (!knoten[oldId]) continue;
+		const old = knoten[oldId];
+		if (!knoten[newId]) {
+			const parentId = newId.includes('.') ? newId.slice(0, newId.lastIndexOf('.')) : null;
+			knoten[newId] = { name: old.name, parent: (parentId && knoten[parentId]) ? parentId : null };
+			if (old.blockiereTeilbaum) knoten[newId].blockiereTeilbaum = true;
+		}
+		reparent(oldId, newId);
+		delete knoten[oldId];
+		changed = true;
+		notes.push(`Kategorie „${old.name}“ wurde von „Göttliches“ nach „${nameOf(knoten[newId].parent || newId)}“ verschoben (Zuordnungen bleiben erhalten).`);
+	}
+
+	// 2) aufgelöste Knoten
+	for (const id of Object.keys(M.REMOVED)) {
+		if (!knoten[id]) continue;
+		const orphans = Object.entries(knoten).filter(([, n]) => n && n.parent === id).map(([oid]) => oid);
+		reparent(id, null);
+		delete knoten[id];
+		changed = true;
+		notes.push(`Kategorie „${M.REMOVED[id]}“ wurde aufgelöst. Einträge mit dieser Zuordnung behalten sie als unbekannte Referenz bzw. verlieren sie beim Import mit Warnung – bitte neu zuordnen (z. B. zu „Namensgebung“).` +
+			(orphans.length ? ` Eigene Unterkategorien (${orphans.map(nameOf).join(', ')}) stehen jetzt auf oberster Ebene.` : ''));
+	}
+
+	// 3) neue Standardknoten (nur beim Heraufstufen aelterer Staende)
+	if (addNewDefaults) {
+		for (const id of M.V2_NEW_IDS) {
+			if (knoten[id]) continue;
+			const def = TAXONOMY_DEFAULT_NODES.find(n => n[0] === id);
+			if (!def) continue;
+			const parent = def[2] && knoten[def[2]] ? def[2] : null;
+			if (def[2] && !parent) continue;      // Oberkategorie fehlt (vom Nutzer entfernt): nicht erzwingen
+			knoten[id] = { name: def[1], parent };
+			changed = true;
+		}
+	}
+	return { obj: { ...input, version: TAX_VERSION, knoten }, notes, changed };
+}
+
+/** Hinweis auf aufgelöste Kategorien (Anzeigename) oder null. */
+function taxRemovedHint(ref) {
+	const s = String(ref == null ? '' : ref).trim();
+	if (!s) return null;
+	const M = TAXONOMY_MIGRATION;
+	const low = s.toLowerCase();
+	if (M.REMOVED[low]) return M.REMOVED[low];
+	const norm = low.split('>').map(p => p.trim()).join('>');
+	return M.REMOVED_LABELS.includes(norm) ? s : null;
+}
+
 // ── Regel ────────────────────────────────────────────────────
 
 /**
@@ -188,6 +399,9 @@ function taxCheckName(name, parentId, selfId, nodes) {
 function taxAddNode(parentId, name) {
 	const nodes = taxGetNodes();
 	if (parentId && !nodes.has(parentId)) throw new Error('Unbekannte Oberkategorie.');
+	if (parentId && taxDepth(parentId, nodes) >= TAX_MAX_DEPTH) {
+		throw new Error(`Maximal ${TAX_MAX_DEPTH} Ebenen: unter „${nodes.get(parentId).name}“ (Ebene ${taxDepth(parentId, nodes)}) kann keine Unterkategorie angelegt werden.`);
+	}
 	const clean = taxCheckName(name, parentId || null, null, nodes);
 	const base = (parentId ? parentId + '.' : '') + taxSlug(clean);
 	let id = base, i = 2;
@@ -298,7 +512,9 @@ function taxDeserialize(obj, warnings) {
  * @returns {number} Anzahl neu ergaenzter Knoten
  */
 function taxMergeSerialized(obj, warnings) {
-	const incoming = taxDeserialize(obj, warnings);
+	const mig = taxMigrateSerialized(obj, { addNewDefaults: false });
+	if (warnings) mig.notes.forEach(n => warnings.push('Taxonomie aus Datei: ' + n));
+	const incoming = taxDeserialize(mig.obj, warnings);
 	const nodes = taxGetNodes();
 	let added = 0;
 	for (const { node } of taxFlatten(incoming)) {
@@ -308,6 +524,7 @@ function taxMergeSerialized(obj, warnings) {
 			added++;
 		}
 	}
+	if (warnings) taxDepthNotes(incoming).forEach(n => warnings.push('Taxonomie aus Datei: ' + n));
 	if (added) { taxPersist(); taxEmit({ type: 'merge', added }); }
 	return added;
 }
@@ -342,6 +559,12 @@ function taxResolveRef(ref, nodes) {
 	if (!s) return null;
 	if (map.has(s)) return s;
 	const low = s.toLowerCase();
+	// Alte (verschobene) Kategorien: id oder Pfad aus Version 1 → neue id
+	const M = (typeof TAXONOMY_MIGRATION !== 'undefined') ? TAXONOMY_MIGRATION : null;
+	if (M) {
+		const legacy = M.LEGACY_IDS[low] || M.LEGACY_LABELS[low.split('>').map(p => p.trim()).join('>')];
+		if (legacy && map.has(legacy)) return legacy;
+	}
 	for (const id of map.keys()) if (id.toLowerCase() === low) return id;
 	const norm = t => t.split('>').map(p => p.trim().toLowerCase()).join('>');
 	const wanted = norm(s);
@@ -371,37 +594,84 @@ function taxNormalizeSemantik(sem, key, nodes) {
 	let primaer = null;
 	if (sem.primaer != null && String(sem.primaer).trim() !== '') {
 		primaer = taxResolveRef(sem.primaer, map);
-		if (!primaer) taxWarn(`${label}Kategorie „${sem.primaer}“ unbekannt – ohne Kategorie übernommen.`);
+		if (!primaer) {
+			const gone = taxRemovedHint(sem.primaer);
+			taxWarn(gone
+				? `${label}Kategorie „${gone}“ wurde aufgelöst – ohne Hauptkategorie übernommen, bitte neu zuordnen.`
+				: `${label}Kategorie „${sem.primaer}“ unbekannt – ohne Kategorie übernommen.`);
+		}
 	}
 	const weitere = [];
 	const list = Array.isArray(sem.weitere) ? sem.weitere : [];
 	for (const w of list) {
 		if (w == null || String(w).trim() === '') continue;
 		const id = taxResolveRef(w, map);
-		if (!id) { taxWarn(`${label}weitere Kategorie „${w}“ unbekannt – ignoriert.`); continue; }
+		if (!id) {
+			const gone = taxRemovedHint(w);
+			taxWarn(gone ? `${label}weitere Kategorie „${gone}“ wurde aufgelöst – ignoriert, bitte neu zuordnen.`
+			             : `${label}weitere Kategorie „${w}“ unbekannt – ignoriert.`);
+			continue;
+		}
 		if (id !== primaer && !weitere.includes(id)) weitere.push(id);
 	}
 	if (!primaer && weitere.length === 0) return null;
 	return { primaer, weitere };
 }
 
+/** Wert einer Zeilenspalte, Spaltenname ohne Beachtung von Gross-/Kleinschreibung. */
+function _taxRowGet(row, name) {
+	if (!row) return undefined;
+	if (Object.prototype.hasOwnProperty.call(row, name)) return row[name];
+	const low = name.toLowerCase();
+	for (const k of Object.keys(row)) if (k.trim().toLowerCase() === low) return row[k];
+	return undefined;
+}
+
 /**
  * Liest die Kategorie aus einer flachen Importzeile.
- * Unterstuetzt: row.semantik (Objekt) oder row.kategorie / row.kategorie_weitere
- * (Text, mehrere weitere Kategorien mit Komma getrennt).
+ * Unterstuetzt:
+ *  - row.semantik (Objekt, JSON-Import)
+ *  - Kurzform: row.kategorie (Pfad „A > B“, id oder eindeutiger Name) + row.kategorie_weitere (kommagetrennt)
+ *  - Pfadspalten: Kategorie_1 … Kategorie_5 (je Ebene ein Name; Zeilen mit Luecken sind ungueltig)
+ * Widersprechen sich Kurzform und Pfadspalten, wird KEINE Hauptkategorie gesetzt und
+ * gewarnt (nichts wird stillschweigend ueberschrieben).
  */
 function taxSemantikFromRow(row, key) {
 	if (!row) return null;
-	let sem = null;
+	const label = key ? `„${key}“: ` : '';
 	if (row.semantik && typeof row.semantik === 'object') {
-		sem = row.semantik;
-	} else {
-		const p = row.kategorie != null ? String(row.kategorie).trim() : '';
-		const w = row.kategorie_weitere != null ? String(row.kategorie_weitere).trim() : '';
-		if (!p && !w) return null;
-		sem = { primaer: p, weitere: w ? w.split(',') : [] };
+		return taxNormalizeSemantik(row.semantik, key);
 	}
-	return taxNormalizeSemantik(sem, key);
+	const p = _taxRowGet(row, 'kategorie');
+	const pText = p != null ? String(p).trim() : '';
+	const w = _taxRowGet(row, 'kategorie_weitere');
+	const wText = w != null ? String(w).trim() : '';
+
+	const cols = [1, 2, 3, 4, 5].map(i => {
+		const v = _taxRowGet(row, 'Kategorie_' + i);
+		return v != null ? String(v).trim() : '';
+	});
+	const hasCols = cols.some(Boolean);
+	if (!pText && !wText && !hasCols) return null;
+
+	let primaerRef = pText;
+	if (hasCols) {
+		const res = taxResolveColumns(cols);
+		if (res.error) {
+			taxWarn(`${label}${res.error} – ohne Hauptkategorie übernommen.`);
+			primaerRef = '';
+		} else {
+			if (pText) {
+				const shorthand = taxResolveRef(pText);
+				if (shorthand !== res.id) {
+					taxWarn(`${label}widersprüchliche Angaben: „kategorie“ = „${pText}“, Kategorie_1–5 = „${taxLabel(res.id)}“ – keine Hauptkategorie gesetzt, bitte korrigieren.`);
+					return wText ? taxNormalizeSemantik({ primaer: '', weitere: wText.split(',') }, key) : null;
+				}
+			}
+			primaerRef = res.id;
+		}
+	}
+	return taxNormalizeSemantik({ primaer: primaerRef, weitere: wText ? wText.split(',') : [] }, key);
 }
 
 /**

@@ -1,0 +1,226 @@
+/* ================================================================
+   tokens.css — Design-Tokens und Theme-Variablen (einzige Quelle)
+
+   Zuständigkeit: nur Custom Properties (Light = :root, Dark =
+   [data-theme="dark"]). Keine Selektoren für Elemente/Komponenten.
+   Komponenten verwenden ausschließlich die semantischen Aliase
+   (--bg-*, --text-*, --border-*, --btn-*, --focus-*, …), nie die
+   Rohfarben der Palette.
+
+   Kontraste (WCAG 2.2 AA) wurden für alle Text-/Hintergrund-Paare
+   mit tools/contrast-audit.py gegen die berechneten Farben geprüft.
+   ================================================================ */
+
+:root {
+
+  /* --- Palette (Rohwerte; nicht direkt in Komponenten verwenden) --- */
+  --color-accent:        #0075de;   /* 4,57:1 auf Weiß */
+  --color-accent-active: #005bab;   /* 6,81:1 auf Weiß */
+  --warm-dark:           #31302e;
+
+  /* --- Semantische Statusfarben (Text/Icons) --- */
+  --color-teal:    #2a9d99;         /* nur Grafik (≥ 3:1), nie als Fließtext */
+  --color-success: #12782a;         /* Text, 5,6:1 auf Weiß */
+  --color-warn:    #b34700;         /* Text, 5,5:1 auf Weiß */
+  --color-danger:  #b3261e;         /* Text/Icon, 6,5:1 auf Weiß */
+
+  /* --- Badge --- */
+  --badge-bg:   #f2f9ff;
+  --badge-text: #005bab;            /* 6,4:1 (vorher #097fe8 = 3,8:1) */
+
+  /* --- Semantische Aliase --- */
+  --bg-page:    #ffffff;
+  --bg-surface: #ffffff;
+  --bg-warm:    #f6f5f4;
+  --bg-overlay: rgba(0,0,0,0.45);
+
+  --text-primary:   rgba(0,0,0,0.95);
+  --text-secondary: #615d59;        /* 6,0:1 auf --bg-warm */
+  --text-muted:     #6f6a65;        /* 4,9:1 auf --bg-warm (vorher #a39e98 = 2,4:1) */
+  --text-link:      #0075de;
+
+  --border-color:   rgba(0,0,0,0.1);
+  --border-whisper: 1px solid rgba(0,0,0,0.1);       /* Trennlinien, Karten (dekorativ) */
+  --border-control: #85817c;                          /* Eingabefelder: ≥ 3:1 (WCAG 1.4.11) */
+
+  /* --- Interaktionsflächen --- */
+  --hover-bg:        rgba(0,0,0,0.05);
+  --hover-bg-strong: rgba(0,0,0,0.09);
+  --tint-success:    rgba(26,174,57,0.10);
+  --tint-warn:       rgba(221,91,0,0.08);
+  --tint-danger:     rgba(179,38,30,0.08);
+
+  /* --- Buttons (Farben je Variante) --- */
+  --btn-primary-bg:       var(--color-accent);
+  --btn-primary-bg-hover: var(--color-accent-active);
+  --btn-primary-text:     #ffffff;
+  --btn-danger-bg:        #b3261e;  /* Weiß darauf 6,5:1 */
+  --btn-danger-bg-hover:  #9f1f17;
+  --btn-danger-text:      #ffffff;
+
+  /* --- Fokus (sichtbar in beiden Themes, ≥ 3:1) --- */
+  --focus-color:  #005bab;
+  --focus-ring:   2px solid var(--focus-color);
+  --focus-offset: 2px;
+
+  /* --- Syntax Highlight (≥ 4,5:1 auf --bg-warm) --- */
+  --code-key:  #1d4ed8;
+  --code-str:  #1a6e3a;
+  --code-bool: #9333ea;
+  --code-null: #b45309;
+  --code-kw:   #0067c2;
+
+  /* --- Typografie --- */
+  --font-sans: 'Inter', -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-mono: 'Roboto Mono', 'Consolas', 'Menlo', monospace;
+
+  --text-body:    1rem;
+  --text-nav:     0.9375rem;
+  --text-caption: 0.875rem;
+  --text-small:   0.8125rem;   /* 13px: Tabellen/Listen, Hilfstexte */
+  --text-badge:   0.75rem;     /* 12px: kleinste Textgröße im Projekt */
+
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  /* --- Abstände (8px-Basis) --- */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.5rem;
+  --space-6:  2rem;
+  --space-7:  3rem;
+  --space-8:  4rem;
+  --space-9:  5rem;
+
+  /* --- Rundungen --- */
+  --radius-micro:  4px;
+  --radius-subtle: 5px;
+  --radius-sm:     8px;
+  --radius-md:     12px;
+  --radius-pill:   9999px;
+
+  /* --- Schatten --- */
+  --shadow-card:
+    rgba(0,0,0,0.040) 0px 4px    18px 0px,
+    rgba(0,0,0,0.027) 0px 2.025px 7.85px 0px,
+    rgba(0,0,0,0.020) 0px 0.8px   2.93px 0px,
+    rgba(0,0,0,0.010) 0px 0.175px 1.04px 0px;
+
+  --shadow-deep:
+    rgba(0,0,0,0.010) 0px 1px  3px  0px,
+    rgba(0,0,0,0.020) 0px 3px  7px  0px,
+    rgba(0,0,0,0.020) 0px 7px  15px 0px,
+    rgba(0,0,0,0.040) 0px 14px 28px 0px,
+    rgba(0,0,0,0.050) 0px 23px 52px 0px;
+
+  /* --- Bewegung --- */
+  --dur-fast:   100ms;
+  --dur-base:   150ms;
+  --dur-slow:   250ms;
+  --ease:        cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out:    cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* --- Bedienelementgrößen ---
+     --btn-h          reguläre Buttons (Hauptaktionen, Dialogaktionen): 44 px
+     --btn-h-compact  kompakte Aktionen/Icon-Buttons: 32 px mit Maus (≥ 24 px, WCAG 2.5.8),
+                      44 px bei grobem Zeigegerät (siehe @media unten)
+     --control-h      Textfelder/Selects: 40 px mit Maus, 44 px bei grobem Zeigegerät
+     --target-min     AA-Mindestgröße einer Zielfläche (WCAG 2.5.8)
+     Immer als min-height/min-width verwendet, damit Textvergrößerung
+     und mehrzeilige Beschriftungen nichts abschneiden. */
+  --btn-h:         2.75rem;
+  --btn-h-compact: 2rem;
+  --control-h:     2.5rem;
+  --target-min:    1.5rem;
+
+  /* --- Layout --- */
+  --header-h: 3.25rem;
+
+  /* --- Dialoge (components/dialog.css) --- */
+  --dlg-w-compact:  26rem;
+  --dlg-w-standard: 32rem;
+  --dlg-w-wide:     42rem;
+  --dlg-gap:        2rem;                      /* Mindestabstand zum Viewportrand (Breite) */
+  --dlg-max-h: calc(100vh - 3rem);             /* Fallback ohne dvh … */
+  --dlg-max-h: calc(100dvh - 3rem);            /* … dvh gewinnt, wo unterstützt */
+
+  /* --- Ebenen --- */
+  --z-col:    1;       /* Sticky-Spalten der Vorschautabelle */
+  --z-col-head: 2;
+  --z-sticky: 10;      /* mobiler Generieren-Button */
+  --z-nav:    200;
+  --z-toast:  500;
+}
+
+/* Grobe Zeigegeräte (Touch): komfortable Zielgrößen über die Tokens.
+   Einzige Stelle, an der Touch-Größen festgelegt werden. */
+@media (pointer: coarse) {
+  :root {
+    --btn-h-compact: 2.75rem;
+    --control-h:     2.75rem;
+  }
+}
+
+/* ================================================================
+   DARK MODE
+   ================================================================ */
+
+[data-theme="dark"] {
+  --bg-page:    #191919;
+  --bg-surface: #202020;
+  --bg-warm:    #252525;
+  --bg-overlay: rgba(0,0,0,0.65);
+
+  --text-primary:   rgba(255,255,255,0.92);
+  --text-secondary: #9b9a97;        /* 5,5:1 auf --bg-warm */
+  --text-muted:     #92918e;        /* 4,9:1 auf --bg-warm (vorher #6b6b69 = 2,9:1) */
+  --text-link:      #4d9de0;
+
+  --border-color:   rgba(255,255,255,0.09);
+  --border-whisper: 1px solid rgba(255,255,255,0.09);
+  --border-control: #7f7e7b;
+
+  --color-accent:        #4d9de0;
+  --color-accent-active: #3a7fc1;
+  --color-success: #6fcf97;
+  --color-warn:    #ff9f5a;
+  --color-danger:  #ff8a7a;
+  --badge-bg:   rgba(77,157,224,0.12);
+  --badge-text: #4d9de0;
+
+  --hover-bg:        rgba(255,255,255,0.07);
+  --hover-bg-strong: rgba(255,255,255,0.12);
+  --tint-success:    rgba(111,207,151,0.12);
+  --tint-warn:       rgba(255,159,90,0.12);
+  --tint-danger:     rgba(255,138,122,0.12);
+
+  /* Weiß auf #4d9de0 wäre nur 2,9:1 → dunkle Beschriftung (6,2:1) */
+  --btn-primary-bg:       #4d9de0;
+  --btn-primary-bg-hover: #6aaee8;
+  --btn-primary-text:     #0f1720;
+  --btn-danger-bg:        #c0392b;
+  --btn-danger-bg-hover:  #a93226;
+  --btn-danger-text:      #ffffff;
+
+  --focus-color: #7ab8f0;
+
+  --code-key:  #7eb8f5;
+  --code-str:  #6fcf97;
+  --code-bool: #ce93d8;
+  --code-null: #ffcc80;
+  --code-kw:   #4d9de0;
+
+  --shadow-card:
+    rgba(0,0,0,0.25) 0px 4px 18px 0px,
+    rgba(0,0,0,0.20) 0px 2px  7px 0px;
+
+  --shadow-deep:
+    rgba(0,0,0,0.30) 0px 1px  3px  0px,
+    rgba(0,0,0,0.35) 0px 7px  15px 0px,
+    rgba(0,0,0,0.40) 0px 23px 52px 0px;
+}

@@ -60,16 +60,23 @@ function initLexikonLoader() {
   if (!host) return;
 
   host.innerHTML = `
-    <details class="card">
-      <summary class="section-label" style="cursor:pointer">Lexikon laden (JSON)</summary>
-      <p class="tax-help">Lädt ein komplettes, mit diesem Tool erzeugtes Lexikon samt Kategorien. Der aktuelle Inhalt aller Wortart-Panels wird ersetzt.</p>
-      <textarea class="form-input" id="lexikonLoadText" rows="3" placeholder="JSON hier einfügen …"></textarea>
+    <details class="acc">
+      <summary class="acc-summary">
+        <span class="acc-icon" aria-hidden="true">${icon('file-braces', 15)}</span>
+        <span class="acc-heading"><span class="acc-title">Lexikon laden (JSON)</span></span>
+        <span class="acc-chevron" aria-hidden="true">${icon('chevron-down', 14)}</span>
+      </summary>
+      <div class="acc-body">
+      <p class="help-text">Lädt ein komplettes, mit diesem Tool erzeugtes Lexikon samt Kategorien. Der aktuelle Inhalt aller Wortart-Panels wird ersetzt.</p>
+      <label class="field-label" for="lexikonLoadText">Lexikon-JSON</label>
+      <textarea class="form-textarea" id="lexikonLoadText" rows="3" placeholder="JSON hier einfügen …" spellcheck="false"></textarea>
       <div class="tax-footer">
-        <button class="btn btn-ghost btn-xs" id="lexikonLoadTextBtn">Aus Text laden</button>
-        <button class="btn btn-ghost btn-xs" id="lexikonLoadFileBtn">Datei wählen …</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="lexikonLoadTextBtn">Aus Text laden</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="lexikonLoadFileBtn">Datei wählen …</button>
         <input type="file" id="lexikonLoadFile" accept=".json,.txt" hidden>
       </div>
-      <div id="lexikonLoadStatus" class="import-status hidden"></div>
+      <div id="lexikonLoadStatus" class="import-status hidden" role="status"></div>
+      </div>
     </details>`;
 
   const status = host.querySelector('#lexikonLoadStatus');

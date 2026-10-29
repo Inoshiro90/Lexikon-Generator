@@ -1,0 +1,124 @@
+/* ================================================================
+   components/taxonomy.css — Kategorienbaum, Vorschläge, „Lexikon laden“
+
+   Kategorien sind verschachtelte Akkordeons: li.tax-node > div.tax-row (Kopfzeile aus Toggle-Button
+   und Aktionsgruppe) + ul.tax-children (Unterkategorien). Die Hierarchie zeigen Nummerierung
+   („1.“, „1.2“, „1.2.3“) und echte Verschachtelung; alle Ebenen haben dieselbe Schriftgröße und
+   Kopfzeilenhöhe, die Einrückung ist je Ebene konstant und klein (kein Schrumpfen tiefer Ebenen).
+   Die Akkordeon-Karten der äußeren Bereiche (.acc) liegen in styles.css.
+   Aktionen sind immer sichtbar (keine Hover-Abhängigkeit); Buttons folgen dem Button-System
+   (32 px Maus / 44 px Touch über --btn-h-compact). ≤ 600 px: Aktionen umbrechen in eine zweite Zeile.
+   ================================================================ */
+
+#taxonomyPanel .acc, #lexikonLoader .acc { margin-bottom: var(--space-3); }
+#taxonomyPanel, #lexikonLoader { margin-top: var(--space-3); }
+
+.tax-notice {
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-warn);
+  border-radius: var(--radius-sm);
+  background: var(--tint-warn);
+  font-size: var(--text-small);
+  line-height: 1.45;
+}
+.tax-notice p { margin: 0 0 var(--space-2); }
+.tax-notice-warn { border-color: var(--color-danger); background: var(--tint-danger); }
+
+/* Kategorienbaum – kein eigener Scrollbereich: die Seite scrollt, so bleiben tiefe Kopfzeilen und Aktionen erreichbar */
+.tax-tree { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.tax-tree[hidden] { display: none; }
+.tax-tree--root { margin-top: var(--space-2); }
+.tax-children {
+  margin-top: var(--space-1);
+  margin-left: var(--space-2);         /* je Ebene konstant */
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--border-color);
+}
+
+.tax-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-2);
+  padding-right: var(--space-1);
+  border: var(--border-whisper);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  font-size: var(--text-small);
+  transition: background var(--dur-base) var(--ease);
+}
+.tax-row:hover { background: var(--bg-warm); }
+
+/* Toggle: ganze linke Fläche ist Trefferfläche (Button), Name darf umbrechen statt abzuschneiden */
+.tax-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 11rem;
+  min-width: 0;
+  min-height: var(--btn-h-compact);
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+button.tax-toggle { cursor: pointer; }
+button.tax-toggle:focus-visible { outline-offset: -2px; }
+.tax-toggle--static { cursor: default; }
+
+.tax-num { flex: none; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tax-name { min-width: 0; overflow-wrap: anywhere; }
+.tax-own { font-style: italic; }
+.tax-toggle .stat-pill { flex: none; }
+
+.tax-actions { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-1); }
+
+/* Teilbaum-Checkbox: das ganze Label ist die Trefferfläche */
+.tax-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--btn-h-compact);
+  padding-inline: var(--space-2);
+  font-size: var(--text-badge);
+  cursor: pointer;
+}
+
+.tax-footer { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+
+@media (max-width: 600px) {
+  .tax-toggle { flex-basis: 100%; }
+  .tax-actions { flex: 1 1 100%; justify-content: flex-start; padding-bottom: var(--space-1); }
+  .acc-summary { padding-inline: var(--space-3); }
+  .acc-body { padding-inline: var(--space-3); }
+  .tax-children { margin-left: var(--space-1); padding-left: var(--space-1); }
+}
+
+/* Vorschläge (Wort → Kategorie) */
+.tax-seed { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: var(--space-2) 0; font-size: var(--text-small); }
+.tax-seed-text { flex: 1 1 12rem; min-width: 0; }
+.tax-seed-list {
+  max-height: 15rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: var(--space-2) 0;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+.tax-seed-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--btn-h-compact);
+  font-size: var(--text-small);
+  cursor: pointer;
+}
+.tax-seed-word { min-width: 5.5rem; font-weight: var(--fw-semibold); }
+.tax-hint { color: var(--text-muted); }

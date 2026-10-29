@@ -1,0 +1,168 @@
+/* ================================================================
+   components/dialog.css — anwendungseigene Dialoge (natives <dialog>)
+
+   Struktur (erzeugt von js/dialog.js):
+     <dialog class="dialog dialog--compact|standard|wide [dialog--form]">
+       <form class="dialog-form" method="dialog">
+         <header class="dialog-header"> .dialog-title + .dialog-close </header>
+         <div class="dialog-body"> Text / Formular </div>
+         <footer class="dialog-footer"> .btn … </footer>
+       </form>
+     </dialog>
+
+   Prinzipien (aus components/modals.css des Soundboards übernommen,
+   an den Lexikongenerator angepasst):
+   - Größenvarianten über Tokens; Breite = min(Zielbreite, Viewport − --dlg-gap)
+   - Höhe begrenzt (vh-Fallback, dvh gewinnt); nur .dialog-body scrollt,
+     Kopf und Aktionsleiste bleiben sichtbar
+   - ≤ 575 px: Bottom-Sheet (volle Breite, bündig unten, Safe-Area),
+     Aktionen untereinander. Ausnahme .dialog--form (Eingabedialog):
+     oben ausgerichtet, damit das Feld nicht hinter der Bildschirmtastatur liegt
+   - niedrige Viewports (≤ 500 px Höhe, z. B. Querformat): kompaktere Ränder
+   - Aktionsbuttons: reguläre Höhe (44 px), umbrechend, nie abgeschnitten
+   Nicht übernommen: feste Rasterhöhen, white-space:nowrap, Großbuchstaben-Buttons.
+   ================================================================ */
+
+html.has-dialog { overflow: hidden; }        /* gesetzt von js/dialog.js, solange ein Dialog offen ist */
+
+.dialog {
+  --dlg-w: var(--dlg-w-standard);
+  width: min(var(--dlg-w), calc(100vw - var(--dlg-gap)));
+  max-width: none;
+  max-height: var(--dlg-max-h);
+  padding: 0;
+  margin: auto;
+  border: var(--border-whisper);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-deep);
+  overflow: hidden;
+}
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: dialogIn var(--dur-slow) var(--ease-out) both;
+}
+.dialog::backdrop { background: var(--bg-overlay, rgba(0,0,0,0.5)); overscroll-behavior: contain; }
+
+.dialog--compact  { --dlg-w: var(--dlg-w-compact); }
+.dialog--standard { --dlg-w: var(--dlg-w-standard); }
+.dialog--wide     { --dlg-w: var(--dlg-w-wide); }
+
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: var(--dlg-max-h);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+  border-bottom: var(--border-whisper);
+}
+
+.dialog-title {
+  min-width: 0;
+  font-size: var(--text-body);
+  font-weight: var(--fw-bold);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+/* Schließen-Button: sichtbares Icon 18 px, Trefferfläche über .btn-icon (32/44 px) */
+.dialog-close svg { width: 18px; height: 18px; }
+
+.dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-4) var(--space-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: var(--text-caption);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.dialog-body p { margin: 0; }
+.dialog-body .dialog-detail { color: var(--text-secondary); }
+
+.dialog-error { color: var(--color-danger); font-size: var(--text-small); font-weight: var(--fw-medium); }
+.dialog-error:empty { display: none; }
+.dialog .form-input[aria-invalid="true"] { border-color: var(--color-danger); }
+
+.dialog-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-5);
+  border-top: var(--border-whisper);
+}
+.dialog-footer .btn { flex: 0 1 auto; min-width: 6.5rem; }
+
+@keyframes dialogIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog[open] { animation: fadeIn 150ms linear both; }
+}
+
+/* ── Bottom-Sheet (≤ 575 px) ─────────────────────────────────── */
+@media (max-width: 575.98px) {
+  :root {
+    --dlg-max-h: calc(100vh - max(env(safe-area-inset-top, 0px), 2rem));
+    --dlg-max-h: calc(100dvh - max(env(safe-area-inset-top, 0px), 2rem));
+  }
+  .dialog {
+    width: 100%;
+    margin: auto 0 0;                          /* bündig unten */
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    border-bottom: 0;
+  }
+  /* Eingabedialog: oben ausgerichtet statt unten (Tastatur verdeckt das Feld nicht) */
+  .dialog--form {
+    margin: max(env(safe-area-inset-top, 0px), var(--space-2)) 0 auto;
+    border-radius: var(--radius-md);
+    border-bottom: var(--border-whisper);
+    width: calc(100% - var(--space-4));
+    margin-inline: auto;
+  }
+  .dialog-header { padding-left: var(--space-4); }
+  .dialog-body   { padding-inline: var(--space-4); }
+  .dialog-footer {
+    flex-direction: column-reverse;           /* Hauptaktion oben, Abbrechen unten */
+    align-items: stretch;
+    padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  }
+  .dialog-footer .btn { width: 100%; }
+}
+
+/* ── Niedrige Viewports (Höhe ≤ 500 px, z. B. Smartphone quer) ── */
+@media (max-height: 500px) {
+  :root {
+    --dlg-max-h: calc(100vh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    --dlg-max-h: calc(100dvh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+  .dialog { margin-block: auto; }
+  .dialog-header, .dialog-footer { padding-block: var(--space-2); }
+  .dialog-body { padding-block: var(--space-3); }
+}
+@media (max-height: 500px) and (max-width: 575.98px) {
+  /* Querformat-Handy: Aktionen wieder nebeneinander, spart Höhe */
+  .dialog { width: min(var(--dlg-w), calc(100vw - var(--dlg-gap) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))); margin: auto; border-radius: var(--radius-md); border-bottom: var(--border-whisper); }
+}
+@media (max-height: 500px) {
+  .dialog-footer { flex-direction: row; flex-wrap: wrap; align-items: center; padding-bottom: var(--space-2); }
+  .dialog-footer .btn { width: auto; }
+}

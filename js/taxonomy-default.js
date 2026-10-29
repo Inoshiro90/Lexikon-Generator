@@ -97,11 +97,10 @@ const TAXONOMY_DEFAULT_NODES = [
 	['konzept.zeit', 'Himmel & Zeit', 'konzept'],
 	['konzept.prinzip', 'Prinzip & Abstraktum', 'konzept'],
 	['konzept.element', 'Element & Naturkraft', 'konzept'],
+	['konzept.domaene_aspekt', 'Domäne & Aspekt', 'konzept'],
 
-	// ── Göttliches (ehemals Gottheit) ───────────────────────
-	['goettliches', 'Göttliches', null],
-	['goettliches.domaene', 'Domäne & Aspekt', 'goettliches'],
-	['goettliches.beiname', 'Beiname & Archetyp', 'goettliches'],
+	// ── Namensgebung (neue Oberkategorie; Unterkategorien bei Bedarf selbst anlegen) ──
+	['namensgebung', 'Namensgebung', null],
 
 	// ── Modifikator ─────────────────────────────────────────
 	['modifikator', 'Modifikator', null],
@@ -113,3 +112,22 @@ const TAXONOMY_DEFAULT_NODES = [
 	['modifikator.stil', 'Stil & Wertung', 'modifikator'],
 	['modifikator.aehnlichkeit', 'Ähnlichkeit (-artig)', 'modifikator']
 ];
+
+/**
+ * Migration älterer Taxonomien (Version 1: Oberkategorie „Göttliches“).
+ * Siehe taxonomy.js → taxMigrateSerialized().
+ *
+ * - LEGACY_IDS:     alte ID → neue ID (Knoten wurde verschoben, Bedeutung gleich)
+ * - LEGACY_LABELS:  alter Anzeigepfad (kleingeschrieben, ohne Leerzeichen um ">") → neue ID
+ * - REMOVED:        aufgelöste Kategorien: alte ID → Anzeigename. Zuordnungen darauf werden
+ *                   NICHT automatisch umgehängt (keine sichere semantische Entsprechung).
+ * - REMOVED_LABELS: Schreibweisen aufgelöster Kategorien (kleingeschrieben)
+ * - V2_NEW_IDS:     mit Version 2 neu hinzugekommene Standardknoten
+ */
+const TAXONOMY_MIGRATION = {
+	LEGACY_IDS: { 'goettliches.domaene': 'konzept.domaene_aspekt' },
+	LEGACY_LABELS: { 'göttliches>domäne & aspekt': 'konzept.domaene_aspekt' },
+	REMOVED: { 'goettliches': 'Göttliches', 'goettliches.beiname': 'Beiname & Archetyp' },
+	REMOVED_LABELS: ['göttliches', 'göttliches>beiname & archetyp', 'beiname & archetyp'],
+	V2_NEW_IDS: ['konzept.domaene_aspekt', 'namensgebung'],
+};

@@ -1,0 +1,133 @@
+/* ================================================================
+   components/preview-table.css — Vorschautabellen je Wortart
+
+   Horizontal scrollbar nur im Container (.preview-wrap), nie die Seite.
+   Fixierte (sticky) Spalten – Spaltenbreiten als Variablen, damit die
+   linken Versätze immer zusammenpassen:
+     .col-sel     Auswahl   (left: 0)
+     .col-wort    Wort      (left: --col-sel-w)
+     .col-actions Aktionen  (right: 0)
+   Ebenen: --z-col (Zellen) < --z-col-head (Kopfzellen), damit fixierte
+   Kopfzellen beim Scrollen über fixierten Datenzellen liegen.
+   ≤ 600 px: nur die Aktionsspalte bleibt fixiert (Auswahl und Wort
+   scrollen mit), damit genug Platz für Eingabefelder bleibt.
+   Größen folgen --btn-h-compact (32 px Maus / 44 px Touch).
+   ================================================================ */
+
+.preview-wrap {
+  --col-sel-w: calc(var(--btn-h-compact) + var(--space-2));
+  --col-actions-w: calc(var(--btn-h-compact) * 2 + var(--space-3));
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  margin-top: var(--space-3);
+  border: var(--border-whisper);
+  border-radius: var(--radius-sm);
+}
+/* Fokusringe liegen innen: der Container schneidet sonst Ringe am Rand ab */
+.preview-wrap :where(button, input, select, textarea):focus-visible { outline-offset: -2px; }
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-caption);
+}
+
+.preview-table thead th {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-warm);
+  border-bottom: var(--border-whisper);
+  font-size: var(--text-badge);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.5px;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.preview-table tbody td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-whisper);
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.preview-table tbody tr:last-child td { border-bottom: none; }
+.preview-table tbody tr:hover td { background: var(--bg-warm); }
+
+.preview-bool { text-align: center; }
+.bool-true  { color: var(--color-teal); font-weight: var(--fw-semibold); }
+.bool-false, .cell-empty { color: var(--text-muted); }
+.kat-cell { min-width: 5.5rem; }
+.kat-warn { color: var(--color-danger); font-weight: var(--fw-semibold); cursor: help; }
+
+/* ── Fixierte Spalten ─────────────────────────────────────────── */
+.preview-table .col-sel,
+.preview-table .col-wort,
+.preview-table .col-actions,
+.preview-table .col-actions-head {
+  position: sticky;
+  z-index: var(--z-col);
+  background: var(--bg-surface);
+}
+.preview-table thead .col-sel,
+.preview-table thead .col-wort,
+.preview-table thead .col-actions-head { background: var(--bg-warm); z-index: var(--z-col-head); }
+
+.preview-table .col-sel   { left: 0; width: var(--col-sel-w); min-width: var(--col-sel-w); padding-inline: 0; text-align: center; }
+.preview-table .col-wort  { left: var(--col-sel-w); font-weight: var(--fw-semibold); }
+.preview-table .col-actions,
+.preview-table .col-actions-head {
+  right: 0;
+  width: var(--col-actions-w);
+  min-width: var(--col-actions-w);
+  padding-inline: var(--space-1);
+  text-align: center;
+  box-shadow: -6px 0 8px -6px rgba(0,0,0,0.18);
+}
+
+/* Hover/Bearbeitung: gleicher Hintergrund auch in den fixierten Zellen */
+.preview-table tbody tr:hover td,
+.preview-table tr.row-editing td { background: var(--bg-warm); }
+
+.row-actions { display: flex; align-items: center; justify-content: center; gap: var(--space-1); }
+
+/* ── Inline-Bearbeitung ───────────────────────────────────────── */
+.cell-input, .cell-select {
+  min-height: var(--btn-h-compact);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-small);
+}
+.cell-input  { width: 100%; min-width: 6rem; }
+.cell-select { cursor: pointer; }
+.cell-select.kat-level { min-width: 8rem; max-width: 13rem; }
+.cell-select[multiple] { min-width: 12rem; }
+.cell-input.cell-invalid, .cell-select.cell-invalid { border-color: var(--color-danger); box-shadow: 0 0 0 2px var(--tint-danger); }
+
+/* ── Sammelzuweisung ──────────────────────────────────────────── */
+.bulk-bar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-left: auto; min-width: 0; }
+.bulk-kat { flex: 1 1 10rem; width: auto; min-width: 0; max-width: 14rem;     /* min-width:0: lange Kategorienamen dehnen die Seite nicht */
+  text-overflow: ellipsis; min-height: var(--btn-h-compact); padding-block: var(--space-1); font-size: var(--text-small); }
+
+/* Touch: ≥ 16 px Schrift verhindert das automatische Hineinzoomen auf iOS */
+@media (pointer: coarse) {
+  .cell-input, .cell-select, .bulk-kat, .paste-area { font-size: 1rem; }
+}
+
+/* ── Schmale Displays ─────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .preview-wrap { --col-actions-w: calc(var(--btn-h-compact) + var(--space-2)); }
+  .preview-table .col-sel,
+  .preview-table .col-wort { position: static; box-shadow: none; }
+  .preview-table .col-sel { width: auto; min-width: var(--col-sel-w); }
+  .row-actions { flex-direction: column; }
+  .preview-table .col-actions { padding-block: var(--space-1); }
+  .bulk-bar { margin-left: 0; width: 100%; }
+  .bulk-kat { max-width: 100%; }
+}
